@@ -346,6 +346,8 @@ def CMA_output(res,**kwargs):
             j += 1
         else:
             print('please put a 0 or 1 in the right input')
+            exit()
+
 
     # here so we can allocate mean out to run on a processor
 

@@ -1,12 +1,16 @@
 import pandas as pd
 
 import DNNtimecluster_mod as TC_mod
+import NN_train_mod
 import TrainDNNtimeclass_mod as TDNN
 import DC_neuralnetwork_mod as NNt
 import ImagebasedDNN as IB_NNt
 import time
 import sys
 import numpy as np
+import shutil
+import DNN_run_mods as runner_mod
+from joblib import dump
 """iMPORT DNN settings""" #Need to get which experimental parameters where loading
 time1 = time.time()
 input_name = sys.argv[1]
@@ -49,13 +53,13 @@ elif supivisorclass == "clustering":
         preclusterreactionmech = reactionmech
         preclusterreact_class = react_class
 
-        print("clustering stuff")
         # SOME GROUPING LABEL IN HERE
-        Groupclass = TDNN.ACreactclusterupdate(react_class, serverdata,num=25) # number is cut of for subgroups
+        Groupclass = TDNN.ACreactclusterupdate(react_class, serverdata,num=10) # number is cut of for subgroups
         """something to get reactionmech labels for AC CASE"""
-        cuttoff = 1000  # groups need to be larger then this number
+        cuttoff = 800  # groups need to be larger then this number
 
         groupeddic = AC_clustergroup(Groupclass, cuttoff)
+
         groupeddicnew = {}
         for labels,lists in groupeddic.items():
             i = 1
@@ -68,10 +72,8 @@ elif supivisorclass == "clustering":
 
             for values in lists:
                 s = "H0" + values[:2]
-                print(values)
                 for i in range(1,int(len(values)/2)):
                     s += "_H" + str(i) + values[int(i*2):int(i*2)+2]
-                print(s)
 
                 # creates to proper sql format
                 if i != 8:
@@ -91,16 +93,49 @@ elif supivisorclass == "clustering":
         # convert reaction labels to clustered labels
         react_class = TDNN.ACreactclusterupdate2(serverdata,groupeddic)
 
+        """print the react class to file"""
+        #print(react_class)
+        #print(len(react_class))
+        clusteredlist = []
+        for stuff in react_class:
+            labelnums = []
+            for sims in stuff:
+                labelnums.append(sims[0])
+
+            bayesdic = TDNN.classifierlabelbayes(labelnums, serverdata,preclusterreactionmech) # last value passes
+            clusteredlist.append(bayesdic)
+
+            """something to get the reaction mechanism of the abbove array"""
+        #  below has been shown to be consistent
+
+        #print clustered list to each label
+        """convert to something we can use for bayesian inference"""
+
 
     else: # """something to get the DC clustered label"""
-
+        """THERE A BUG HERE WITH HOW THE SYSTEM REPRESENTS THE NUMBERS IN THE OUTPUT FILE BUT SHOULDN'T EFFECT THE SYSTEM"""
+        """BUG IS PURELY VISUAL AND IN THE OUTPUT BAYES PRINTER FIX NOT REQUIRED FOR DC AS ALL UNIVARIANT DATA"""
+        preclusterreactionmech = reactionmech
+        preclusterreact_class = react_class
         react_class, reactionmech = TDNN.DCreactclusterupdate(react_class,serverdata)
 
-        """something to get reactionmech labels"""
+        """print the react class to file"""
+        # print(react_class)
+        # print(len(react_class))
+        clusteredlist = []
+        for stuff in react_class:
+            labelnums = []
+            for sims in stuff:
+                labelnums.append(sims[0])
+
+            bayesdic = TDNN.classifierlabelbayes(labelnums, serverdata, preclusterreactionmech)  # last value passes
+            clusteredlist.append(bayesdic)
+
 
     Narray = TDNN.Narray_count(react_class)
 
- # train data is for train NN, testdata is for testing NN
+
+# train data is for train NN, testdata is for testing NN
 testdata, traindata, Ntest, Ntrain = TC_mod.suffle_splittrainratio(trainratio, react_class)
 
 modeldic = TDNN.modeldataloader(modelparamterfile)
@@ -111,8 +146,45 @@ modeldic = TDNN.modeldataloader(modelparamterfile)
 model_numcode = {}
 for i in range(len(reactionmech)):
     model_numcode.update({reactionmech[i]:i})
-print( model_numcode)
+
 Nmodels = len(reactionmech)
+
+
+#SAVE THE MODEL to file with settings
+filename = supivisorclass+"_"+DNNmodel +"_Var"+str(variate)
+#make file
+filename = NN_train_mod.genericoutpufile(supivisorclass+"_"+DNNmodel +"_Var"+str(variate))
+#copy settings
+modelname = filename+ "/trained.model"
+shutil.copyfile(input_name, filename+"/settings.txt")
+
+if supivisorclass == "clustering":
+    #  below has been shown to be consistent
+    f = open(filename+"/clusteringlabelsbayes.txt","w+")
+    for keys, items in model_numcode.items():
+        f.write(str(items)+"\t")
+        for key,item in clusteredlist[items].items():
+            f.write(key+":"+str(item)+"\t")
+        f.write("\n")
+    f.close()
+
+    #creates a file for sublabels
+    if ACCase:
+        f = open(filename+"/clusteringnumberlabelinfo.txt","w+")
+
+        for keys,items in model_numcode.items():
+            f.write("Label# "+str(items)+"\t"+"numsims:"+str(len(react_class[items]))+"\t"+keys+": ")
+            # gets out all the seperate labels
+            x  = groupeddic.get(keys)
+            for stuff in x:
+                f.write(stuff + "\t")
+            f.write("\n")
+        f.close()
+
+    #print clustered list to each label
+    """convert to something we can use for bayesian inference"""
+
+"""PUT ANALYSIS PLOTS IN THE ABOVE FILE"""
 
 #seperates the input data into each model type
 if variate: #use the multivariate models TRUE = multivariate
@@ -120,13 +192,10 @@ if variate: #use the multivariate models TRUE = multivariate
     print("Running classifier on AC data")
 
     harmtrain, harmtrain_mech, harmtrain_ID = NNt.DC_NN_setter(traindata, harmdata)  # training data
-    print("worked")
     harmtest, harmtest_mech, harmtest_ID = NNt.DC_NN_setter(testdata, harmdata)  # testing data for validation
-    print("worked2")
 
     # small change made fater less likely to parralellise it
     currentdatatest, mechaccepttest = TDNN.ACsqlcurrentcollector(serverdata, harmdata, harmtest, deci,DNNmodel)
-    print("print3")
     currentdatatrain, mechaccepttrain = TDNN.ACsqlcurrentcollector(serverdata, harmdata, harmtrain, deci,DNNmodel)
 
     #load all the data from sql databaase and save to RA
@@ -156,7 +225,7 @@ if variate: #use the multivariate models TRUE = multivariate
         currentdatatrain = pd.DataFrame(currentdatatrain)
         currentdatatest = pd.DataFrame(currentdatatest)
         print("done")
-        print(len(currentdatatrain))
+        print(currentdatatrain.shape)
         print(len(currentdatatest))
         # these are 1D so not required
         mechlabelstrain = np.array(mechlabelstrain)
@@ -207,14 +276,13 @@ if variate: #use the multivariate models TRUE = multivariate
 
         # model = Classifier_INCEPTION("output",None,nb_classes=Nmodels )
         model = Classifier_INCEPTION("output", (deci, Nchanel), nb_classes=Nmodels, verbose=True,
-                                     nb_epochs=3)  # using 20 epochs for ease
+                                     nb_epochs=40)  # using 20 epochs for ease
         model.build_model((deci, Nchanel), Nmodels)
         model.fit(currentdatatrain, mechlabelstrain, currentdatatest, mechlabelstest, mechlabelstest1)
         print("TestingDNN")
         """# NEED SOMETHING HERE TO TEST THE MODEL ACCURACY
 
             # also need to clean up the output metrics"""
-
 
     else:
         print("ERROR: No DNN model has been classified")
@@ -237,7 +305,6 @@ else: # use the univarate models Mainly used in DC Case
     for values in mechaccepttest:
         x.append(model_numcode.get(values[1]))
     mechlabelstest = x
-
     x = []
     for values in mechaccepttrain:
         x.append(model_numcode.get(values[1]))
@@ -306,7 +373,7 @@ else: # use the univarate models Mainly used in DC Case
 
         #model = Classifier_INCEPTION("output",None,nb_classes=Nmodels )
         print()
-        model = Classifier_INCEPTION("output", (deci,Nchanel), nb_classes=Nmodels,verbose=True,nb_epochs=3) # using 20 epochs for ease
+        model = Classifier_INCEPTION("output", (deci,Nchanel), nb_classes=Nmodels,verbose=True,nb_epochs=40) # using 20 epochs for ease
         model.build_model((deci,Nchanel),Nmodels)
         model.fit(currentdatatrain, mechlabelstrain,currentdatatest,mechlabelstest,mechlabelstest1)
         print("TestingDNN")
@@ -375,8 +442,6 @@ else: # use the univarate models Mainly used in DC Case
 
         NNt.accuracyplot(history, harmnum, filename)
 
-        modelname = filename + "/testmodel_" + str(harmnum) + ".model"
-        model.save(modelname)
         # train the bloddy thing
 
         NNt.genericfitingdata(filename, harmnum, (time.time()-time1)/60, model_numcode, model_numcode, harmtrain_mech)
@@ -390,5 +455,24 @@ else: # use the univarate models Mainly used in DC Case
         print("ERROR: No DNN model has been classified")
         exit()
 
+# Also need something here to do the important values and save to file EG run time #mechanisms #number of stuff # any other shit
+
+
+# saves the model to file with all information
+
+"""MODELS WILL NEED TO BE SAVED DIFFERENTLY FOR EACH SYSTEM"""
+if DNNmodel == "imagebased": # keras based models
+    model.save(modelname)
+
+elif  DNNmodel == "inceptiontime":
+    """FIX"""
+    #saved as part of training model inside the inceptiontime
+
+elif DNNmodel == "rocket": #sktime based models similaur to scikit learn
+    from joblib import dump
+
+    dump(rocket, filename+ "/rocket.model")  # might need a correction here for .joblib file
+    dump(classifier, modelname) #might need a correction here for .joblib file
 
 print("Completion Time (mins): " + str((time.time()-time1)/60))
+exit()

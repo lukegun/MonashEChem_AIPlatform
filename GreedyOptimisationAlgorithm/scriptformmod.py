@@ -93,7 +93,6 @@ def values2Master(data,Evalues, ACmode,ACsettings, scanrate,Nsim,pinnedvalues,sp
 
     return data
 
-
 # function to get around python printing numbers truncated and worng0
 def format_e(n):
     a = '%E' % n

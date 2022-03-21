@@ -6,6 +6,7 @@ from scipy.fftpack import rfft, irfft, rfftfreq
 from scipy.signal import hilbert as anal_hil_tran # NEED signal to make a smooth envolope
 import matplotlib.pyplot as plt
 import psycopg2
+import os
 
 # loads in a file of generic parameter values
 def settingsload(filename):
@@ -122,7 +123,6 @@ def unitconversion(code,value,unit):
         elif unit == "mm2":
             value = value*0.01
         elif unit == "m2":
-            print("fuck")
             value = value * 10000
         else:
             pass
@@ -427,7 +427,6 @@ def EXPharmtreatment(nEX,Extime, truntime, Nsim):
     return Nsimdeci, Nex
 
 def Reactparaallocator(reactmech):
-    print(reactmech)
     if reactmech == "E":
         allpara = [[11,1],[22,1],[33,1],[34,1],[35,1]]
         scaledparas = [[1.0,2,22,2]]
@@ -466,8 +465,6 @@ def supivisedpriors(serverdata, ReactionMech,allparas):
 
         inputfile = inputfileraw.split("\n") # seperates the lines
 
-        print(inputfile)
-
         i = 0
         for lines in inputfile:
             if lines.strip("\t ") == "varibles":
@@ -477,7 +474,7 @@ def supivisedpriors(serverdata, ReactionMech,allparas):
                 break
             i += 1
         varibles = inputfile[st+1:end]
-        print(varibles)
+
         # remove empty lines JUST IN CASE
         hold = []
         j = 0
@@ -533,6 +530,9 @@ def varallocator(allpara,paraestdic,priors,scaledparas,functparas,E0values,space
         if int(keys)< 10:
             pinnedpara.append([items,int(keys),1])
             ii += 1
+        elif int(keys) == 21: #concentration
+            pinnedpara.append([items, int(keys), 1])
+            ii += 1
         else:
             feedpara.append(int(keys))
 
@@ -572,7 +572,6 @@ def varallocator(allpara,paraestdic,priors,scaledparas,functparas,E0values,space
             j = 1
             for stuff in functparas[1::]:
                 if stuff[1] == i+1:
-                    print(f)
                     functparas[j][1] = f
                 j += 1
         f += 1
@@ -591,12 +590,9 @@ def varallocator(allpara,paraestdic,priors,scaledparas,functparas,E0values,space
         i += 1
         ii += 1
 
-    print("fuck")
-    print(functparas)
     # corrects the paired THESE functional parameters are a mess
     j = 0
-    print(functionallist)
-    print(allpara)
+
     for stuff in functparas[1::]:
 
         if stuff[2] == 1:
@@ -609,7 +605,7 @@ def varallocator(allpara,paraestdic,priors,scaledparas,functparas,E0values,space
                     functparas[j+1][3] = f
                 f += 1
         j += 1
-    print(functparas)
+
     # place E0 pinned in
     Neideal = 0
     i = 0
@@ -620,13 +616,10 @@ def varallocator(allpara,paraestdic,priors,scaledparas,functparas,E0values,space
             Neideal += 1
         i += 1
 
-    print(var)
     vestore = []
     for ll in range(len(var)):
         if var[ll][4] == 33:
             vestore.append(ll)
-
-
 
     if Neideal == En: # case where all possible E0 have been found
         i = 0
@@ -668,8 +661,6 @@ def varallocator(allpara,paraestdic,priors,scaledparas,functparas,E0values,space
                 l[i] = functionallist[j][0]
                 j += 1
 
-
-        print(l)
         funclist = listin_func(l, functparas, functionallist)
 
         for values in funclist:
@@ -702,7 +693,6 @@ def listin_func(val_in, funcvar, funcvar_holder): #(val_in, funcvar, funcvar_hol
     funclist = []
     i = 0
     while i != funcvar[0][0]:
-        print(funcvar_holder[i])
         Nfunc = int(funcvar[i+1][1]) - 1  # gets varible row
         if funcvar[i + 1][2] == 0:  # if functional parameter is unpaired
             if funcvar_holder[i][1] == 41:  # R functional parameter
@@ -727,10 +717,7 @@ def listin_func(val_in, funcvar, funcvar_holder): #(val_in, funcvar, funcvar_hol
         else:  # if functional parameter is paired
             Ncoup = int(funcvar[i + 1][3]) - 1  # gets paired parameter listin input
             if funcvar_holder[i][1] == 41:  # R functional parameter
-                print(Nfunc,Ncoup)
-                # sets Kf
-                print(val_in)
-                print(Nfunc,Ncoup)
+
                 Kf = val_in[Nfunc] * np.sin(val_in[Ncoup] * (np.pi / 180))
                 # sets kb
                 Kb = val_in[Nfunc] * np.cos(val_in[Ncoup] * (np.pi / 180))
@@ -809,7 +796,6 @@ def listin_func(val_in, funcvar, funcvar_holder): #(val_in, funcvar, funcvar_hol
 # Assigns the varibles to there respective lines in the MECSim settings
 def greedymodline_assigner(pinnedpara,  spaces):
     # sets the value for var
-    print(spaces)
     i = 0
     while i != len(pinnedpara):
 
@@ -966,5 +952,26 @@ def EXPharmtreatmentOG(EX_hil_store,sigma,Extime, truntime, op_settings):
         # Somefunction that truncates the sigma values at set time points
 
     return EX_hil_store, sigma, Nsimdeci, Nex
+
+# function for checking if the output file
+def outputfilegenertor(outputfname):
+
+    file = True
+    i = 0
+    while file:
+        try:
+            if i == 0:
+                filename = outputfname
+                os.makedirs(filename)
+            else:
+                filename = outputfname +"_V" +str(i)
+                os.makedirs(filename)
+            file = False
+        except:
+            print("file already exists")
+        finally:
+            i += 1
+
+    return filename
 
 

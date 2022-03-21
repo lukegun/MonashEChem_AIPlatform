@@ -30,11 +30,11 @@ MirrorURL: http://us.archive.ubuntu.com/ubuntu/
        		exit 1
 	fi
 	
-	# loop for running MECWRITTER
+	# loop for running MECWRITER
 	if [ "$1" = "MECWRITER" ] ; then
 
 		echo "running MECWRITER"
-		python3.7 ${SINGULARITY_ROOTFS}/runcode/MECWRITER/Mecsimwritter.py $2 > $stripinput_terminaloutput.txt
+		python3.7 ${SINGULARITY_ROOTFS}/runcode/MECWRITER/main.py $2 > $stripinput_terminaloutput.txt
     
 		echo "finished"
 

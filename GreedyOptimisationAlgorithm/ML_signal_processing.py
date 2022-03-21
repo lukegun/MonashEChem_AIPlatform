@@ -982,11 +982,9 @@ def EXPharmtreatment(EX_hil_store,sigma,Extime, truntime, op_settings):
 
 def log10harmtunc(Excurr, frequens, bandwidth,truntime,AC_freq,Nex):
 
-    print(Nex)
     x = [] # new EXCurr array
     freqx = []
-    print(AC_freq)
-    print(truntime)
+
     N = len(bandwidth[0])
     nsimdecionoff = []
     plt.plot(frequens[0:len(Excurr)],np.log10(Excurr))

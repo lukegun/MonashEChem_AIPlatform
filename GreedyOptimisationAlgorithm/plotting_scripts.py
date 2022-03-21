@@ -41,7 +41,7 @@ def harmplot(outputfname,Simcurr,Simtime,EX_hil_store,Exp_t,bandwidth,AC_freq,sp
     #EX_hil_store = MLsp.harm_gen(EXcurr, Exp_t[1], AC_freq, bandwidth, spaces) Not needed as passed in straight
 
     Sim_hil_store = MLsp.harm_gen(Simcurr, Simtime[1], AC_freq, bandwidth, spaces)
-    print(EX_hil_store.shape[1],Sim_hil_store.shape[1],len(Exp_t))
+
     os.makedirs(outputfname)
 
     N = len(bandwidth[0])
@@ -86,7 +86,7 @@ def harmplot(outputfname,Simcurr,Simtime,EX_hil_store,Exp_t,bandwidth,AC_freq,sp
             textstr = '%ith Harmonic\n%%Err = %.3f  ' % (i,x1 * 100)
         plt.figure()
         fig, ax = plt.subplots()
-        print(Exp_t)
+
         plt.plot(Exp_t,EX_hil_store[i,:],color='k',label='Experimental')
         plt.plot(Simtime, Sim_hil_store[i, :], color='r',label='Simulated',linestyle='-.')
         plt.ylabel('Current (Amps)')
@@ -97,7 +97,7 @@ def harmplot(outputfname,Simcurr,Simtime,EX_hil_store,Exp_t,bandwidth,AC_freq,sp
         ax.legend(loc = 'upper right')
         s = '%s/Harmonic%i' % (outputfname, i)
         plt.savefig(s, bbox_inches='tight')
-        plt.close()
+        plt.close('all')
 
         # error as function of time
         i += 1

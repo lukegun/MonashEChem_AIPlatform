@@ -73,9 +73,15 @@ def AC_clustergroup(ks,cuttoff):
                 ii = 2
                 j = 2
                 for s in comp[2:]:  # skips the DC
+                    # bug here for when the group labels change from (a_) to (b_)
                     if values[ii] == s:
                         j += 1
                     ii += 1
+                # if DC is different breaks the groups up definatly
+                # This is done for steady state and surface confined which have specific when it won't work
+                if comp[:2] != values[:2]:
+                    j = 0
+
 
                 # Can do two difference but looks like it may group things a little twoo much
                 if Nt - j == 2 or Nt - j == 1 or Nt - j == 0:

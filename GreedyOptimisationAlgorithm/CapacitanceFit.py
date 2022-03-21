@@ -36,22 +36,20 @@ class overallcapfit():
         """ DC OR AC CAP FIT """
         self.E0value = [] # holds the Eapparent value
 
+        self.deci = int(len(self.Excurr)/16384)
+
 
     def overall_fitting(self):
 
         #"""EXTRACT THE SPECIFIC DATA"""
-
-        """REGION SELECTION"""
         capregion = self.automatic_regionselect()
-        print("cunt")
 
         """extract region defined as the capacitance region from voltage, time and current for fitting DO DECIMATION HERE"""
-        print("Deci NEED TO BE FIXED CAPACITANCE FIT.py ")
-        deci = 32 # should be calculated required to make things efficent
+        deci = self.deci # should be calculated required to make things efficent
         DCvoltage = self.DCvoltage[::deci]
         expvoltage = self.expvoltage[::deci]
         fundimentalharm = self.fundimentalharm[::deci]
-        print(fundimentalharm.shape)
+
         #DChold = []
         evolthold = []
 
@@ -218,10 +216,8 @@ class overallcapfit():
 
 
     def automatic_regionselect(self):
-        print(len(self.Excurr))
 
         if self.ACmode:
-            print(self.truncation)
             print("need to include the truncation and decimation on the DC voltagage")
             x = self.Excurr[self.truncation[0]:int(len(self.Excurr)-self.truncation[0])]
 
@@ -232,27 +228,24 @@ class overallcapfit():
             """cumsum takes the (window_width-1) from the array so these points will needed to be added back {ASSUME FLAT}"""
             for i in range(2):
                 #plt.figure()
-                print(x.shape)
                 x = np.gradient(x, edge_order=2) / self.dt  # 1st derivative
                 #plt.plot(x)
                 # cheap line smoothing incase gradient is noisy using cumsum
                 window_width = int(len(x)/100)
-                print(window_width)
+
                 cumsum_vec = np.cumsum(np.insert(x, 0, 0))
                 x = (cumsum_vec[window_width:] - cumsum_vec[:-window_width]) / window_width
                 # bellow was added for edge cases
 
                 x = np.concatenate((np.ones(int(round(window_width, 0)/2))*x[0], x, np.ones(int(window_width/2))*x[-1]))
-                print(x.shape[0])
+
                 #plt.plot(x)
                 # done twice to make sure system is good done the opisite way to undo shift in values
                 #np.convolve(x, np.ones(n) / n, mode='valid')
                 cumsum_vec = np.cumsum(np.insert(x, 0, 0))
                 x = (cumsum_vec[window_width:] - cumsum_vec[:-window_width]) / window_width
                 x = np.concatenate((np.ones(int(round(window_width, 0)/2)-1)*x[0], x, np.ones(int(window_width/2 ))*x[-1]))
-                print(x.shape[0])
-                #plt.plot(x)
-                #plt.savefig(str(i) + ".png")
+
                 gradhold.append(x)
 
             # we can probably truncate this stuff
@@ -268,8 +261,6 @@ class overallcapfit():
                 window = int(len(x) / (50)) # this needs to be a parameter
                 steadypointg = argrelextrema(x, np.greater, axis=0, order=window, mode='clip')
                 steadypointl = argrelextrema(x, np.less, axis=0, order=window, mode='clip')
-
-                print(steadypointl)
 
                 xg = []
                 for values in steadypointg[0]:
@@ -299,8 +290,7 @@ class overallcapfit():
                 axs[i].vlines(xhold[2][1], min(gradhold[i]), max(gradhold[i]), colors='r')
 
             plt.savefig("gradtest.png")
-
-            print(xhold)
+            plt.close()
             # the below is horrible but it works
             dichold = {}
             jj = 0
@@ -320,10 +310,8 @@ class overallcapfit():
                     i += 1
                 j += 1
 
-            print(dichold)
             #code to identify the faradaic region
             dictoy = {k: v for k, v in sorted(dichold.items(), key=lambda item: item[1])}
-            print(dictoy)
 
             # CHECK THE FUNDIMENTAL MAX IN THE CORRECT PATTERN
             i = 0
@@ -336,10 +324,8 @@ class overallcapfit():
                     startc = True
                     v = v + values[:2]
                     arraylist.append(items)
-                    print(v)
                     if v == "2m1m2lfm1l2m" or v == "2m1mfm2l1l2m" or v == "2m1l2lfm1m2m" or v == "2m1l2lfm1m2m": # last two are the flipped conditionsconditions
                         print("faradaic component found")
-                        print(arraylist)
 
                         #below are done for blurring bassed on assumitry in the system
                         scale = 1.5 # scale is added to proper avoid the faradiac region
@@ -374,7 +360,6 @@ class overallcapfit():
 
 
                 else:
-                    print(items)
                     v += values[:2]
                     arraylist.append(items)
 
@@ -390,9 +375,6 @@ class overallcapfit():
             faradic = deepcopy(fregionlist)
             i = 0
             for values in faradic:
-                print("shit")
-                print(values[2])
-                print(nmidlow,nmidhigh)
                 if values[2] > nmidlow and  values[2] < nmidhigh:
                     fregionlist.pop(i) # deletes the entry that is the sitching potential
                 i += 1
@@ -427,6 +409,7 @@ class overallcapfit():
         for values in capregion:
             plt.axvspan(values[0], values[1], alpha=0.5, color='red')
         plt.savefig("testregion.png")
+        plt.close()
 
 
         # combine to the background regions with the voltage and pass to optimisation

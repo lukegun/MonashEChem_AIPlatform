@@ -218,6 +218,7 @@ def EXPsetrow_collector(serverdata,models):
 
 # count number for each reaction model and check if same
 def Narray_count(react_class):
+
     Narray = []
     x = 0
     for arrays in react_class:
@@ -227,7 +228,8 @@ def Narray_count(react_class):
     if all(Narray[0] == rest for rest in Narray):
         Narray = Narray[0]
     else:
-        print("Error: length of tests do not equal accross all classifications")
+        pass
+        #print("Error: length of tests do not equal accross all classifications")
     Narray = x
     return Narray
 
@@ -369,7 +371,15 @@ def ACsqlcurrentcollector(serverdata, harmdata, reactionID, deci,DNNmodel):
                         nlen = len(xtot)
                         Ndec = int(nlen / deci)
                         xtot = xtot[::Ndec]
-                        xtot = xtot / max(xtot)
+
+                        # this is the normalisation stuff
+                        if current == 0 or current == -1:
+                            xs = [-1,1]
+                        else:
+                            xs = [0, 1]
+                        #xtot = (xs[1]-xs[0])*((xtot-np.min(xtot))/(np.max(xtot)-np.min(xtot))+ xs[0])
+
+                        """ATEMPT TO PUT A RATIO IN AS A CHANNEL OR SOMETHING"""
 
                         if Rocket:
                             dic.update({str(current): xtot})
@@ -615,3 +625,52 @@ def NN_ILgenerator_dc_exp(current,Nx,Ny,minI,maxI):
     ml_reshaped = ml_output.reshape((n_i, n_e))
 
     return ml_reshaped
+
+# gets the number of labels that go with the sytem and calculate a bayesian probability depending on the numbers
+def classifierlabelbayes(labelnums,serverdata,reactmechs):
+
+    try:
+        connection = psycopg2.connect(user=serverdata[0],
+                                      password=serverdata[1],
+                                      host=serverdata[2],
+                                      port=serverdata[3],
+                                      database=serverdata[4])
+
+        cursor = connection.cursor()
+
+        yaya = """SELECT "ReactionMech" FROM "ReactionClass" WHERE "Reaction_ID" IN %s """
+
+        cursor.execute(yaya,(tuple(labelnums),))
+
+        Groupclass = cursor.fetchall()
+        #print(Groupclass)
+
+        # converts it to something i can use
+        grouplist = []
+        for values in Groupclass:
+            grouplist.append(values[0])
+
+        # extracts bayes stuff
+        bayesdic = {}
+        grouptot = set(grouplist)
+        N = len(grouplist)
+        for labelval in grouptot:
+            bayesdic.update({labelval:grouplist.count(labelval)/N})
+
+        #adds empty values in if nothing is detected present in the cluster
+        for values in reactmechs:
+            if not any(values == x for x in list(grouptot)):
+                bayesdic.update({values: 0})
+
+        # sorts the dictionary into the order given by the reaction mechanism
+        bayesdic = dict([(i,bayesdic[i]) for i in reactmechs])
+
+    except (Exception, psycopg2.Error) as error:
+        print("error,", error)
+    finally:
+        # This is needed for the
+        if (connection):
+            cursor.close()
+            connection.close()
+
+    return bayesdic

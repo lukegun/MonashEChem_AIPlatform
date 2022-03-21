@@ -9,7 +9,6 @@ import psycopg2
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
-import keras
 import random
 from random import shuffle # mixing up or currently ordered data that might lead our network astray in training.
 import os
@@ -275,9 +274,10 @@ def NN_codegenerator(inputdata, model_numcode):
         x.append(stuff)
     return x
 
+#keras.utils.Sequence requires tensorflow2.7
 class Machine_learning_class(keras.utils.Sequence):
     # initialisation
-    def __init__(self,inputdata,harmnum,batchsize=32,dim=(100,100),serverdata=["testdb"],n_classes = 1000,n_channels =1,model_numcode = {"E":0},cpu_number = 1,exp_data = {}):
+    def __init__(self,inputdata,harmnum,batchsize=32,dim=(100,100), serverdata=["testdb"], n_classes = 1000, n_channels =1, model_numcode = {"E":0},cpu_number = 1,exp_data = {}):
         self.harmnum = harmnum # which number harmonic we are identifying
         self.batch_size = batchsize # numer of data points we are taking
         self.imagedimensions = dim
@@ -713,17 +713,17 @@ def NN_ILgeneratorflip(current,Nx,Ny):
 
     return ml_reshaped
 
-def genericoutpufile(NN,filters,modeltype,freqused,activtype):
+def genericoutpufile(filters):
     # make a file for reaction mechanisms  but check one isnt there to begin with
     file = True
     i = 0
     while file:
         try:
             if i == 0:
-                filename = "Output_" + NN +freqused +"Hz" +modeltype+activtype+ filters +"_"+ str(datetime.date.today())
+                filename = "Output_" + filters +"_"+ str(datetime.date.today())
                 os.makedirs(filename)
             else:
-                filename = "Output_" + str(i) + "_" + NN +freqused +"Hz" +modeltype+activtype+ filters + "_" + str(datetime.date.today())
+                filename = "Output_" + str(i) + filters + "_" + str(datetime.date.today())
                 os.makedirs(filename)
             file = False
         except:
@@ -889,3 +889,5 @@ def genericfitingdata(filename, harmnum, intertic,model_numcode,models,harmtrain
     f.close()
 
     return
+
+

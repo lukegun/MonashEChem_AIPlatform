@@ -1,5 +1,6 @@
 import numpy as np
 import psycopg2
+import psycopg2.extras as extras
 import time
 import datetime
 import matplotlib.pyplot as plt
@@ -61,6 +62,21 @@ def inputloader(input_name):
 
     n_init = int(inputstrip(lines[9]))
 
+    metric = inputstrip(lines[10])
+    metric = metric.split(",")
+    x = [str(metric[0].strip(" ")),int(metric[1].strip(" "))]
+    # order is [metric,SC_band]
+    metric = x
+
+    # loaad up the process
+    training = inputstrip(lines[11])
+
+    training = training.split(",")
+    x = [str_to_bool(training[0].strip(" ")), str(training[1].strip(" "))]
+    # order is [metric,SC_band]
+    training = x
+
+
     i = 9
     for line in lines[i:]:
         if line.strip("\n\t ") == "Reaction mechanisms":
@@ -79,7 +95,16 @@ def inputloader(input_name):
         jj += 1
 
 
-    return serverdata, filpcurrent, fliprate,AC_case,cpu_workers,deci,nondim, reactionmech, n_cluster, harmoicnumber,n_cluster, n_init
+    return serverdata, filpcurrent, fliprate,AC_case,cpu_workers,deci,nondim, reactionmech, n_cluster, harmoicnumber,n_cluster, n_init,metric,training
+
+
+def str_to_bool(s):
+    if s == 'True':
+         return True
+    elif s == 'False':
+         return False
+    else:
+         raise ValueError
 
 def inputstrip(x):
     y = x.strip("\n\t ")
@@ -156,13 +181,22 @@ def sqlcurrentcollector(serverdata,current, reactionID,deci):
 
         yaya = sqlharmcol(current)
 
+        tupleID = []
+        for ID in reactionID:
+            tupleID.append(ID[0])
+        tupleID = tuple(tupleID)
+
+        cursor.execute(yaya, (tupleID,))
+        xtotall = cursor.fetchall()
+
         tots = []
         mechaccept = []
-        for ID in reactionID:
+        for xrow in xtotall:
+            xtot = xrow[0]
+            reactID = xrow[1]
+            #cursor.execute(yaya, (ID[0],))
 
-            cursor.execute(yaya, (ID[0],))
-
-            xtot =cursor.fetchall()[0][0]
+            #xtot =cursor.fetchall()[0][0]
 
             if type(xtot) is type(None):
 
@@ -175,7 +209,20 @@ def sqlcurrentcollector(serverdata,current, reactionID,deci):
 
                 xtot = xtot / max(xtot)
                 tots.append(xtot)
-                mechaccept.append([ID[0],ID[1]])
+
+                #slow but lazy and works (world need to change a lot of stuff to dics to work right)
+                allocatedmech = False
+                for stuff in reactionID:
+                    if reactID == stuff[0]:
+                        rmech = stuff[1]
+                        allocatedmech = True
+
+                # shouldn't exicute but just in caseTseriesKmeansloader(
+                if not allocatedmech:
+                    print("Reactmech not allocated for " + str(reactID))
+                    rmech = None
+
+                mechaccept.append([reactID,rmech])
 
     except (Exception, psycopg2.Error) as error:
         print("error,", error)
@@ -192,25 +239,25 @@ def sqlcurrentcollector(serverdata,current, reactionID,deci):
 def sqlharmcol(name):
 
     if name == -1: # use the total current
-        yaya = """SELECT "TotalCurrent" FROM "HarmTab" WHERE "Reaction_ID" = %s"""
+        yaya = """SELECT "TotalCurrent","Reaction_ID" FROM "HarmTab" WHERE "Reaction_ID" IN %s"""
     elif name == 0:
-        yaya = """SELECT "HarmCol0" FROM "HarmTab" WHERE "Reaction_ID" = %s"""
+        yaya = """SELECT "HarmCol0","Reaction_ID" FROM "HarmTab" WHERE "Reaction_ID" IN %s"""
     elif name == 1:
-        yaya = """SELECT "HarmCol1" FROM "HarmTab" WHERE "Reaction_ID" = %s"""
+        yaya = """SELECT "HarmCol1","Reaction_ID" FROM "HarmTab" WHERE "Reaction_ID" IN %s"""
     elif name == 2:
-        yaya = """SELECT "HarmCol2" FROM "HarmTab" WHERE "Reaction_ID" = %s"""
+        yaya = """SELECT "HarmCol2","Reaction_ID" FROM "HarmTab" WHERE "Reaction_ID" IN %s"""
     elif name == 3:
-        yaya = """SELECT "HarmCol3" FROM "HarmTab" WHERE "Reaction_ID" = %s"""
+        yaya = """SELECT "HarmCol3","Reaction_ID" FROM "HarmTab" WHERE "Reaction_ID" IN %s"""
     elif name == 4:
-        yaya = """SELECT "HarmCol4" FROM "HarmTab" WHERE "Reaction_ID" = %s"""
+        yaya = """SELECT "HarmCol4","Reaction_ID" FROM "HarmTab" WHERE "Reaction_ID" IN %s"""
     elif name == 5:
-        yaya = """SELECT "HarmCol5" FROM "HarmTab" WHERE "Reaction_ID" = %s"""
+        yaya = """SELECT "HarmCol5","Reaction_ID" FROM "HarmTab" WHERE "Reaction_ID" IN %s"""
     elif name == 6:
-        yaya = """SELECT "HarmCol6" FROM "HarmTab" WHERE "Reaction_ID" = %s"""
+        yaya = """SELECT "HarmCol6","Reaction_ID" FROM "HarmTab" WHERE "Reaction_ID" IN %s"""
     elif name == 7:
-        yaya = """SELECT "HarmCol7" FROM "HarmTab" WHERE "Reaction_ID" = %s"""
+        yaya = """SELECT "HarmCol7","Reaction_ID" FROM "HarmTab" WHERE "Reaction_ID" IN %s"""
     elif name == 8:
-        yaya = """SELECT "HarmCol8" FROM "HarmTab" WHERE "Reaction_ID" = %s"""
+        yaya = """SELECT "HarmCol8","Reaction_ID" FROM "HarmTab" WHERE "Reaction_ID" IN %s"""
     else:
         print("Error: to many harmonics have been requested in function sqlharmcol")
         exit()
@@ -235,27 +282,52 @@ def KnearestN(data,n_clusters,cpu_workers):
     print(A.toarray())
 
     return dists,ind, A
+def TseriesKmeansloader(data,current,fileloc):
+    # modified for system
+    if current == -1 or current == 0:
+        scaler = TimeSeriesScalerMinMax(value_range=(-1., 1.))
+        data = scaler.fit_transform(data)
+        # below has been placed here as it doesn't seem to be helping the optimisation of the grouping
+        currentdata = TimeSeriesScalerMeanVariance().fit_transform(data)
+    else:
+        scaler = TimeSeriesScalerMinMax(value_range=(0., 1.))  # Rescale time series
+        currentdata = scaler.fit_transform(data)
 
-def TseriesKmeans(data,n_clusters,cpu_workers,model,reactionmech,current,n_init,filename):
+    ks = TimeSeriesKMeans().from_hdf5(fileloc+'/trainedtimeseries'+str(current) +'.hdf5')
+
+    y_pred = ks.predict(currentdata)
+
+    return y_pred
+
+def TseriesKmeans(data,n_clusters,cpu_workers,model,reactionmech,current,n_init,filename,metric):
 
    # modified for system
     if current == -1 or current == 0:
         scaler = TimeSeriesScalerMinMax(value_range=(-1., 1.))
+        data = scaler.fit_transform(data)
+        # below has been placed here as it doesn't seem to be helping the optimisation of the grouping
+        currentdata = TimeSeriesScalerMeanVariance().fit_transform(data)
     else:
         scaler = TimeSeriesScalerMinMax(value_range=(0., 1.))  # Rescale time series
-    data = scaler.fit_transform(data)
+        currentdata = scaler.fit_transform(data)
 
-    currentdata = TimeSeriesScalerMeanVariance().fit_transform(data)
     sz = len(currentdata)
+    #this is here to save memory
+    del data
 
     # kShape clustering
-
-
-    ks = TimeSeriesKMeans(n_clusters=n_clusters, max_iter=6,metric='dtw',
-                      #metric_params={"global_constraint": "sakoe_chiba", "sakoe_chiba_radius":32},
-                      n_init=n_init,  tol=0.001, dtw_inertia=True,
+    if metric[1] != 0: # if this isn't zero system uses sakoe_chiba
+        ks = TimeSeriesKMeans(n_clusters=n_clusters, max_iter=6,metric=metric[0],
+                      n_init=n_init,  tol=0.001, #dtw_inertia=True,
                           n_jobs=cpu_workers)
-    ks.fit(currentdata)
+    else:
+        ks = TimeSeriesKMeans(n_clusters=n_clusters, max_iter=6, metric=metric[0],
+                              metric_params={"global_constraint": "sakoe_chiba", "sakoe_chiba_radius": metric[1]},
+                              n_init=n_init, tol=0.001,  # dtw_inertia=True,
+                              n_jobs=cpu_workers)
+
+    #ks.fit(currentdata)
+   # change made here might of been doubling up
     y_pred = ks.fit_predict(currentdata)
 
 
@@ -282,7 +354,7 @@ def TseriesKmeans(data,n_clusters,cpu_workers,model,reactionmech,current,n_init,
         j = 0
         while j != 10 and i != len(y_pred):
             if yi == y_pred[i]:
-                dataplot.append(data[i])
+                dataplot.append(currentdata[i])
                 dataploty.append(yi)
                 j += 1
             i += 1
@@ -290,10 +362,12 @@ def TseriesKmeans(data,n_clusters,cpu_workers,model,reactionmech,current,n_init,
     plt.figure(figsize=(24, 20))
     for yi in range(n_clusters):
         plt.subplot(n_clusters, 1, 1 + yi)
+        plt.plot(ks.cluster_centers_[yi].ravel(), "r-")
         i = 0
         for xx in dataplot:
             if dataploty[i] == yi:
                 plt.plot(xx.ravel(), "k-", alpha=.2)
+
             i += 1
 
         plt.title("Cluster %d" % (yi + 1))
@@ -303,7 +377,7 @@ def TseriesKmeans(data,n_clusters,cpu_workers,model,reactionmech,current,n_init,
         i = 0
         for xx in dataplot:
             if dataploty[i] == yi:
-                plt.plot(xx.ravel(), "k-")
+                #plt.plot(xx.ravel(), "k-")
                 break
             i += 1
 
@@ -312,6 +386,13 @@ def TseriesKmeans(data,n_clusters,cpu_workers,model,reactionmech,current,n_init,
     plt.tight_layout()
     #plt.show()
     plt.savefig(filename+'/'+"testTimeSeriesKmean"+str(current)+ str(n_clusters) + ".png")
+    plt.close()
+
+    plt.figure()
+    for yi in range(n_clusters):
+        plt.plot(ks.cluster_centers_[yi].ravel())
+    plt.savefig(filename+'/'+"clustermeans.png")
+    plt.close()
 
     return y_pred
 
@@ -417,9 +498,15 @@ def harmlabel(serverdata,label,current):
 
         cursor = connection.cursor()
 
+        reactionlabeldic = []
         for mech in label:
-            dic.update({"Reaction_ID":mech[0],"label":mech[1]})
-            cursor.execute(string, dic)
+            dic = {"Reaction_ID": mech[0], "label": mech[1]}
+            reactionlabeldic.append(dic)
+        reactionlabeldic = tuple(reactionlabeldic)
+
+        #extras.execute_values(cursor, string, reactionlabeldic)
+        extras.execute_batch(cursor,string, reactionlabeldic,page_size=5000)
+        #cursor.executemany(string, reactionlabeldic)
 
         connection.commit()  # the commit is needed to save changes
 
@@ -430,6 +517,9 @@ def harmlabel(serverdata,label,current):
         if (connection):
             cursor.close()
             connection.close()
+
+
+
     return
 
 
@@ -514,6 +604,103 @@ def outputwritterfin(outputname,comtime,labels):
     return
 
 def AClabelcollector(serverdata,mechaccept,n_cluster,harmnumber):
+    try:
+        connection = psycopg2.connect(user=serverdata[0],
+                                      password=serverdata[1],
+                                      host=serverdata[2],
+                                      port=serverdata[3],
+                                      database=serverdata[4])
+
+        cursor = connection.cursor()
+
+        qinput ="""SELECT "EXPsetrow", "ReactionMech" FROM "ExperimentalSettings" GROUP BY "EXPsetrow", "ReactionMech"  """
+        cursor.execute(qinput,)
+        expsettings = cursor.fetchall()
+
+        print("TRY IN instead of = in the below eries")
+        # use this querie system
+        #cursor.execute(getmech,(reacttuple,))
+        # sets up for the total label
+        getdata = """SELECT "HarmCol0", "HarmCol1", "HarmCol2","HarmCol3","HarmCol4", "HarmCol5", "HarmCol6","HarmCol7","HarmCol8", "Reaction_ID"
+                    FROM "ReactionClass" Where "Reaction_ID" IN %s"""
+
+        # can be obtained from above but easier to get from below
+        getmech = """SELECT "ReactionMech", "Reaction_ID" FROM "Simulatedparameters" Where "Reaction_ID" IN %s"""
+
+        #cursor.execute(getdata,())
+        #expsettings = cursor.fetchall()
+        reacttuple = []
+        for mech in mechaccept:
+            #reacttuple.append((mech[0],)) I belevie this is what is required in the = situation
+            reacttuple.append(mech[0])
+        reacttuple = tuple(reacttuple)
+        print("cunt")
+        # gets the reaction mechanism
+        #extras.execute_batch(cursor, getmech, reacttuple, page_size=5000)
+        cursor.execute(getmech, (reacttuple,))
+        #cursor.execute(getmech,(mech[0],))
+        reactmechtot = cursor.fetchall()
+        print("fuck")
+        #gets the harm lables
+        #cursor.execute(getdata,(mech[0],))
+        #extras.execute_batch(cursor, getdata, reacttuple, page_size=5000)
+        cursor.execute(getdata, (reacttuple,))
+        harmlabelstot = cursor.fetchall()
+        print("SHIT")
+        #harmlabels = harmlabels[0]
+        dicharmlabel = {}
+        for harmlabels in harmlabelstot:
+            s0 = harmlabels[harmnumber[0]]
+            if s0 == None:
+                s0 = "H" + str(harmnumber[0]) + "00"
+
+            for i in harmnumber[1:]:
+                s = harmlabels[i]
+
+                if type(s) == type(None):
+                    s = "H" + str(i) +"00"
+                s0 += "_"+ s
+            dicharmlabel.update({harmlabels[-1]:s0})
+        print("blah")
+        """UPDATE THE OVERALL LABEL"""
+        qinput = """UPDATE "ReactionClass" SET "EXPsetrow" = %(EXPsetrow)s, "OverallLabel" = %(OverallLabel)s,
+                    "traininglabels" = %(traininglabels)s, "classsetrow" = %(classsetrow)s WHERE "Reaction_ID" = %(Reaction_ID)s"""
+
+        updatetuple = []
+        for reactmech in reactmechtot:
+             #classetrow holds the label for multiple training will change in future
+
+            for inputs in expsettings:
+                if inputs[1] == reactmech[0]:
+                    EXPsetrow = inputs[0]
+                    dic = { "traininglabels": n_cluster, "classsetrow": 1,"EXPsetrow": EXPsetrow,
+                           "OverallLabel": dicharmlabel.get(reactmech[1]), "Reaction_ID": reactmech[1]}
+            updatetuple.append(dic)
+        updatetuple = tuple(updatetuple)
+        print("blah2")
+
+        extras.execute_batch(cursor, qinput, updatetuple, page_size=5000)
+        #cursor.execute(qinput,dic) # (mech[0], EXPsetrow, mech[2],s0,n_cluster,1,)
+        connection.commit()  # the commit is needed to save changes
+        print("poopoo")
+        # one off collects all the stuff for printing
+        qinput = """SELECT "OverallLabel", COUNT(*) AS num FROM "ReactionClass" GROUP BY "OverallLabel" """
+        cursor.execute(qinput)
+        labelocurrannce = cursor.fetchall()
+        print("poopoo2")
+
+    except (Exception, psycopg2.Error) as error:
+        print("error,", error)
+    finally:
+        # This is needed for the
+        if (connection):
+            cursor.close()
+            connection.close()
+
+    return labelocurrannce
+
+"""DELETE below one"""
+def OLDAClabelcollector(serverdata,mechaccept,n_cluster,harmnumber):
     try:
         connection = psycopg2.connect(user=serverdata[0],
                                       password=serverdata[1],
@@ -636,12 +823,18 @@ def ACLabelpreallocator(serverdata, reactID):
                                       database=serverdata[4])
 
         #Preallocates the rows with and ID and mechanism
-        cursor = connection.cursor()
-        for ids in reactID:
-            qinput ="""INSERT INTO "ReactionClass"("Reaction_ID", "ReactionMech") VALUES(%s,%s)  """
-            cursor.execute(qinput,(ids[0],ids[1],))
-        connection.commit()  # the commit is needed to save changes
 
+        reactlistID = []
+        for ids in reactID:
+            reactlistID.append(tuple(ids))
+
+        cursor = connection.cursor()
+        t1 = time.time()
+
+        qinput ="""INSERT INTO "ReactionClass"("Reaction_ID", "ReactionMech") VALUES %s  """
+        extras.execute_values(cursor,qinput,reactlistID)
+        connection.commit()  # the commit is needed to save changes
+        print("Time for preallocation: "+ str((time.time() - t1)/60))
 
     except (Exception, psycopg2.Error) as error:
         print("error,", error)
@@ -650,5 +843,14 @@ def ACLabelpreallocator(serverdata, reactID):
         if (connection):
             cursor.close()
             connection.close()
+
+    return
+
+def labelprinterDC(filename,strlabel):
+
+    f = open(filename+"/ReactionIDlabels.txt","w+")
+    for mechs in strlabel:
+        f.write(str(mechs[0])+"\t"+str(mechs[1])+"\n")
+    f.close()
 
     return
