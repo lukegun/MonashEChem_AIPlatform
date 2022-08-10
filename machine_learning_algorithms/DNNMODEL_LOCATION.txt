@@ -1,5 +1,0 @@
-RR = DNN_MODELS/rocket_reactmech.model
-RC = DNN_MODELS/rocket_clustering.model
-IR = DNN_MODELS/inceptiontime_reactmech.hdf5
-IC = DNN_MODELS/inceptiontime_clustering.hdf5 
-bayesclusteringinfo = DNN_MODELS/clusteringlabelsbayes.txt

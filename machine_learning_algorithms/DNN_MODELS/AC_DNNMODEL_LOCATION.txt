@@ -1,0 +1,3 @@
+IC = DNN_MODELS/AC/inceptiontime_clustering.hdf5 
+IR = DNN_MODELS/AC/inceptiontime_reactmech.hdf5 
+bayesclusteringinfo = DNN_MODELS/AC/clusteringlabelsbayes.txt
