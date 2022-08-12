@@ -2,8 +2,6 @@
 
 import psycopg2
 import numpy as np
-import tensorflow as tf
-from tensorflow import keras
 import random
 from random import shuffle # mixing up or currently ordered data that might lead our network astray in training.
 import os
@@ -11,13 +9,8 @@ import datetime
 import matplotlib.pyplot as plt
 import time
 from multiprocessing import Pool # for collecting the data
-
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout, Flatten, Lambda
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Conv1D, Activation , BatchNormalization
-from tensorflow.keras.layers import AveragePooling2D, SpatialDropout2D
-from tensorflow.keras.layers import Input, concatenate, Add # this is for layered inputs
-from tensorflow.keras import mixed_precision
+import tensorflow as tf
+from tensorflow import keras
 
 
 class Machine_learning_class(keras.utils.Sequence):
@@ -252,7 +245,7 @@ def DC_NN_setter(datain,harmnum):
     data_ID = []
     data_mech = []
     data = []
-    s = ''
+    print(len(datain))
     for inputs in datain:
 
         data_ID.append(inputs[0])
