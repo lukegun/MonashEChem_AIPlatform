@@ -115,9 +115,9 @@ class Machine_learning_class(keras.utils.Sequence):
     def image_collector(self, react_ID):
 
         connection = psycopg2.connect(user="postgres",
-                                      password="Quantum2",
-                                      host="localhost",
-                                      port="5432",
+                                      password="password",
+                                      host="host",
+                                      port="port",
                                       database=self.serverdata[0])
 
         cursor = connection.cursor()

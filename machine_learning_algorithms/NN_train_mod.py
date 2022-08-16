@@ -67,9 +67,9 @@ def EXPsetrow_collector(serverdata,models,ACcomp):
 # connect to database and extract the
 def EXPsetrow_dcdata(serverdata,exp_class):
     connection = psycopg2.connect(user="postgres",
-                                  password="Quantum2",
-                                  host="localhost",
-                                  port="5432",
+                                  password="password",
+                                  host="host",
+                                  port="port",
                                   database=serverdata[0])
 
     cursor = connection.cursor()

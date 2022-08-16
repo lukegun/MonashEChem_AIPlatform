@@ -19,7 +19,7 @@ linefont = 5
 model = TimeSeriesKMeans.from_hdf5(path=modelfile+"/trainedtimeseries-1.hdf5")
 #barycenter = model.cluster_centers_[modellabel].ravel()
 
-dname = ["postgres", "Quantum2", "localhost", 5432, "dc_db"]
+dname = ["postgres", "password", "host", port, "table"]
 
 arrs = []
 count = 0
