@@ -49,7 +49,7 @@ fogsize = (16,8)
 fontsize = 15
 #barycenter = model.cluster_centers_[modellabel].ravel()
 
-dname = ["postgres", "Quantum2", "localhost", 5432, "dc_db"]
+dname = ["postgres", "password", "host", port, "table"]
 
 arrs = []
 count = 0

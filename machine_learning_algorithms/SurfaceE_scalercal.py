@@ -25,7 +25,7 @@ tf.config.set_logical_device_configuration(gpus[0], [tf.config.LogicalDeviceConf
 time1 = time.time()
 
 #This is the output of input loader but is constant in this calculation
-serverdata = ["postgres", "Quantum2", "35.193.220.74", "5432", "ftacv-test"]
+serverdata = ["postgres", "password", "ipadress", "post", "table"]
 reactionmech = ["E","ESurf"]
 modelparamterfile = "testmodelfile.txt" # don't know what this does but leave it in and hope it works
 deci = 2**8

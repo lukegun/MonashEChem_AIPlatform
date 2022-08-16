@@ -24,12 +24,12 @@ ACcase = True
 
 if ACcase:
     modelfile = "DNN_MODELS/AC/inceptiontime_clustering.hdf5"
-    dname = ["postgres", "Quantum2", "35.193.220.74", 5432, "ftacv-test"]
+    dname = ["postgres", "password", "host", post, "table"]
     harmdata = [0, 1, 2, 3, 4, 5, 6, 7, 8]
     accase = "AC" # for naming
 else:
     modelfile = "DNN_MODELS/DC/inceptiontime_clustering.hdf5"
-    dname = ["postgres", "Quantum2", "localhost", 5432, "dc_nonlincap_db"]
+    dname = ["postgres", "password", "host", port, "table"]
     harmdata = [-1]
     accase = "DC" # for naming
 

@@ -10,13 +10,13 @@ import time
 
 print("FUCK")
 dname = "timeseriesFTACV"#"DC_db_kf"
-#conn = psycopg2.connect("dbname=test user=postgres password=Quantum2")
+
 #help("modules")
 try:
     connection = psycopg2.connect(user = "postgres",
-                                  password = "Quantum2",
-                                  host = "localhost",
-                                  port = "5432",
+                                  password = "password",
+                                  host = "host",
+                                  port = "port",
                                   database = dname)
 
     cursor = connection.cursor()
