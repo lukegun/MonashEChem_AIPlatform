@@ -363,9 +363,9 @@ class Machine_learning_class(keras.utils.Sequence):
     def image_collector(self,react_ID):
 
         connection = psycopg2.connect(user="postgres",
-                                      password="Quantum2",
-                                      host="localhost",
-                                      port="5432",
+                                      password="Password",
+                                      host="host",
+                                      port="port",
                                       database=self.serverdata[0])
 
         cursor = connection.cursor()
@@ -436,9 +436,9 @@ def FTACV_CNN_trainer(inputdata,batch_size,n_channels,imagedimensions,serverdata
 def trainimage_collector(react_ID,serverdata,harmnum,imagedimensions):
 
     connection = psycopg2.connect(user="postgres",
-                                      password="Quantum2",
-                                      host="localhost",
-                                      port="5432",
+                                      password="password",
+                                      host="host",
+                                      port="port",
                                       database=serverdata[0])
 
     cursor = connection.cursor()
