@@ -126,9 +126,9 @@ def EXPsetrow_dcdata(serverdata,exp_class):
 def ReactID_collector(serverdata,exp_class):
 
     connection = psycopg2.connect(user="postgres",
-                                  password="Quantum2",
-                                  host="localhost",
-                                  port="5432",
+                                  password="password",
+                                  host="host",
+                                  port="port",
                                   database=serverdata[0])
 
     cursor = connection.cursor()
