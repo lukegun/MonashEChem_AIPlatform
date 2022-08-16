@@ -1,4 +1,6 @@
 import string
+import time
+
 import numpy as np
 from itertools import islice
 from pandas import read_csv
@@ -6,6 +8,8 @@ import numpy as np
 from scipy.fftpack import rfft, irfft, rfftfreq
 from scipy.signal import hilbert as anal_hil_tran # NEED signal to make a smooth envolope
 import matplotlib.pyplot as plt
+import psycopg2
+import DNN_run_mods as runner_mod
 
 # extract stuff from the terminal line
 def terminalextract(terminal):
@@ -237,48 +241,6 @@ def settingsload(filename):
 
     return numiter, stdaccept
 
-#file to load the exp data
-def expextract(filename):
-
-    # loads the first few lines of input file to memory
-    with open(filename, 'r') as file:
-        lines_gen = islice(file, 48)
-        linesstore = []
-        for lines in lines_gen:
-            s = lines.strip("\n")
-            linesstore.append(s)
-
-    # all the below is for cvsin_type_1 format
-    if linesstore[0] == "cvsin_type_1":
-        Estart = float(linesstore[1].split("\t")[1])
-        Eend = float(linesstore[2].split("\t")[1])
-        Emax = float(linesstore[3].split("\t")[1])
-        Emin = float(linesstore[4].split("\t")[1])
-
-        Ncycles = float(linesstore[10].split("\t")[1])
-
-        Evalues = [Estart,Eend,Emax,Emin,Ncycles]
-
-        freq = float(linesstore[5].split("\t")[1])
-        amp = float(linesstore[6].split("\t")[1])
-
-        ACsettings = [freq,amp]
-
-        scanrate = float(linesstore[8].split("\t")[1])
-
-        results = read_csv(filename, delim_whitespace=True, skiprows=19, names=["v", "i", "t"])
-        current = results.values[:,1]  # changes results fro df object to np array and extract current
-        voltage = results.values[:,0]
-
-        Dt = results.values[1,2]
-        Tmax = results.values[-1,2]
-        timedata = [Dt,Tmax]
-    else:
-        print("ERROR: INCORRECT EXPERIMENTAL FILE EXIT: in FUNCTION expextract")
-        exit()
-
-    return Evalues, ACsettings,scanrate,current,voltage,timedata
-
 
 #extracts windows for log10 auto counter
 def Simerharmtunc(Nsimlength, exptime, bandwidth,HarmMax,AC_freq):
@@ -457,47 +419,6 @@ def EXPharmtreatment(nEX,Extime, truntime, Nsim):
 
     return Nsimdeci, Nex
 
-def expextract(filename):
-
-    # loads the first few lines of input file to memory
-    with open(filename, 'r') as file:
-        lines_gen = islice(file, 48)
-        linesstore = []
-        for lines in lines_gen:
-            s = lines.strip("\n")
-            linesstore.append(s)
-
-    # all the below is for cvsin_type_1 format
-    if linesstore[0] == "cvsin_type_1":
-        Estart = float(linesstore[1].split("\t")[1])
-        Eend = float(linesstore[2].split("\t")[1])
-        Emax = float(linesstore[3].split("\t")[1])
-        Emin = float(linesstore[4].split("\t")[1])
-
-        Ncycles = float(linesstore[10].split("\t")[1])
-
-        Evalues = [Estart,Eend,Emax,Emin,Ncycles]
-
-        freq = float(linesstore[5].split("\t")[1])
-        amp = float(linesstore[6].split("\t")[1])
-
-        ACsettings = [freq,amp]
-
-        scanrate = float(linesstore[8].split("\t")[1])
-
-        results = read_csv(filename, delim_whitespace=True, skiprows=19, names=["v", "i", "t"])
-        current = results.values[:,1]  # changes results fro df object to np array and extract current
-        voltage = results.values[:,0]
-
-        Dt = results.values[1,2]
-        Tmax = results.values[-1,2]
-        timedata = [Dt,Tmax]
-    else:
-        print("ERROR: INCORRECT EXPERIMENTAL FILE EXIT: in FUNCTION expextract")
-        exit()
-
-    return Evalues, ACsettings,scanrate,current,voltage,timedata
-
 def paraextract(parameterestimates):
     paradic = {}
     lowercase = string.ascii_lowercase
@@ -570,3 +491,339 @@ def clusterbayesloader(filename):
         listofdic.append(dic)
 
     return listofdic
+
+def second_largest(numbers):
+    count = 0
+    m1 = m2 = float('-inf')
+    for x in numbers:
+        count += 1
+        if x > m2:
+            if x >= m1:
+                m1, m2 = x, m1
+            else:
+                m2 = x
+    return m2 if count >= 2 else None
+
+# function to load the reaction IDs from the database
+def sqlReactIDclusters(serverdata,clusters,reactionmech):
+
+    clusterst = tuple(clusters)
+
+    try:
+        connection = psycopg2.connect(user=serverdata[0],
+                                      password=serverdata[1],
+                                      host=serverdata[2],
+                                      port=serverdata[3],
+                                      database=serverdata[4])
+
+        cursor = connection.cursor()
+        para = cursor.execute(
+            """SELECT "Reaction_ID" FROM "ReactionClass" WHERE ("ReactionMech" = %s AND "OverallLabel" IN %s) """, (reactionmech,clusterst,))
+
+        rIDS = cursor.fetchall()
+        reactionIDS = []
+        for x in rIDS:
+            reactionIDS.append(x)
+
+        # sqlcom = """INSERT INTO time(test,"Ctime") VALUES( %()s, CURRENT_TIMESTAMP )"""
+
+    except (Exception, psycopg2.Error) as error:
+        print("error,", error)
+    finally:
+        # This is needed for the
+        if (connection):
+            cursor.close()
+            connection.close()
+
+    return reactionIDS
+
+
+
+# function to load the reaction IDs from the database
+def sqlparameterclusters(serverdata,reactID):
+
+    reactID = tuple(reactID)
+
+    try:
+        connection = psycopg2.connect(user=serverdata[0],
+                                      password=serverdata[1],
+                                      host=serverdata[2],
+                                      port=serverdata[3],
+                                      database=serverdata[4])
+
+        cursor = connection.cursor()
+        para = cursor.execute(
+            """SELECT * FROM "Simulatedparameters" WHERE "Reaction_ID" IN %s""", (reactID,))
+
+        rIDS = cursor.fetchall()
+        parametervalues = []
+        for x in rIDS:
+            parametervalues.append(x)
+
+
+        # sqlcom = """INSERT INTO time(test,"Ctime") VALUES( %()s, CURRENT_TIMESTAMP )"""
+
+    except (Exception, psycopg2.Error) as error:
+        print("error,", error)
+    finally:
+        # This is needed for the
+        if (connection):
+            cursor.close()
+            connection.close()
+
+    return parametervalues
+
+# load the experimental settings for ftacv data
+def expextract(filename):
+
+    # loads the first few lines of input file to memory
+    with open(filename, 'r') as file:
+        lines_gen = islice(file, 48)
+        linesstore = []
+        for lines in lines_gen:
+            s = lines.strip("\n")
+            linesstore.append(s)
+
+    # all the below is for cvsin_type_1 format
+    if linesstore[0] == "cvsin_type_1":
+        Estart = float(linesstore[1].split("\t")[1])
+        Eend = float(linesstore[2].split("\t")[1])
+        Emax = float(linesstore[3].split("\t")[1])
+        Emin = float(linesstore[4].split("\t")[1])
+
+        Ncycles = float(linesstore[10].split("\t")[1])
+
+        Evalues = [Estart,Eend,Emax,Emin,Ncycles]
+
+        freq = float(linesstore[5].split("\t")[1])
+        amp = float(linesstore[6].split("\t")[1])
+
+        ACsettings = [freq,amp]
+
+        scanrate = float(linesstore[8].split("\t")[1])
+
+        results = read_csv(filename, delim_whitespace=True, skiprows=19, names=["v", "i", "t"])
+        current = results.values[:,1]  # changes results fro df object to np array and extract current
+        voltage = results.values[:,0]
+
+        Dt = results.values[1,2]
+        Tmax = results.values[-1,2]
+        timedata = [Dt,Tmax]
+
+    elif "cvsin_type_2" in linesstore[0]:
+        print(linesstore[1].split(":"))
+        Estart = float(linesstore[1].split(":")[1])
+        Eend = float(linesstore[2].split(":")[1])
+        Emax = float(linesstore[3].split(":")[1])
+        Emin = float(linesstore[4].split(":")[1])
+
+        Ncycles = float(linesstore[33].split(":")[1])
+
+        Evalues = [Estart, Eend, Emax, Emin]
+
+        # CORRECTION FOR MECSIM BUG
+        Emin = min(Evalues)
+        Emax = max(Evalues)
+        Evalues = [Estart, Eend, Emax, Emin, Ncycles]
+
+        freq = float(linesstore[5].split(":")[1])
+        amp = float(linesstore[6].split(":")[1])
+
+        ACsettings = [freq, amp]
+
+        scanrate = float(linesstore[30].split(":")[1])
+
+        results = read_csv(filename, delim_whitespace=True, skiprows=41, names=["v", "i", "t"])
+        current = results.values[:, 1]  # changes results fro df object to np array and extract current
+        voltage = results.values[:, 0]
+
+        Dt = results.values[1, 2]
+        Tmax = results.values[-1, 2]
+        timedata = [Dt, Tmax]
+
+    else:
+        print("ERROR: INCORRECT EXPERIMENTAL FILE EXIT: in FUNCTION expextract")
+        exit()
+
+    return Evalues, ACsettings,scanrate,current,voltage,timedata
+
+#files for extracting the AC format
+def ACinpureader(expfile):
+
+
+    Evaluehold = []
+    ACsettingshold = []
+    scanratehold = []
+    currenthold = []
+    voltagehold = []
+    for file in expfile:
+        Evalues, ACsettings, scanrate, current, expvoltage, timedata = expextract(file)
+        Evaluehold.append(Evalues)
+        ACsettingshold.append(ACsettings)
+        scanratehold.append(scanrate)
+        currenthold.append(current)
+        voltagehold.append(expvoltage)
+
+    # check to see if exp files are the same
+    if all([Evaluehold[0] == x1 for x1 in Evaluehold]) and all([ACsettingshold[0] == x1 for x1 in ACsettingshold]) and all(
+            [scanratehold[0] == x1 for x1 in scanratehold]):
+        Evalues = Evaluehold[0]
+        ACsettings = ACsettingshold[0]
+        scanrate = scanratehold[0]
+        # """Average the experimental voltage""" something can be added here for the psuedo reference
+        expvoltage = np.average(voltagehold, axis=0)
+
+    else:
+        print("ERROR the exp settings files are wrong and don't all match up")
+        exit()
+
+    """ identify if AC or DC """
+    ACmode = False
+    if ACsettings[1] != 0:
+        ACmode = True
+
+    return ACmode,Evalues,ACsettings,scanrate,currenthold,expvoltage, timedata
+
+#files for extracting the AC format
+def DCinpureader(expfile):
+
+
+    Evaluehold = []
+    ACsettingshold = []
+    scanratehold = []
+    currenthold = []
+    voltagehold = []
+    for file in expfile:
+        """PUT SOMETHING HERE TO READ THE FORMATED DC DATA"""
+        f = open(file,"r")
+        linesstore = f.readlines()
+        f.close()
+
+        Estart = float(linesstore[2].split("\t")[1])
+        Eend = float(linesstore[3].split("\t")[1])
+        Emax = float(linesstore[4].split("\t")[1])
+        Emin = float(linesstore[5].split("\t")[1])
+
+        Ncycles = float(linesstore[9].split("\t")[1])
+
+        Evalues = [Estart, Eend, Emax, Emin, Ncycles]
+
+        scanrate = float(linesstore[8].split("\t")[1])
+        s = linesstore[6].split("\t")[1]
+        polarity = s.strip(" ")
+
+        #check to see where current and stuff start
+        found = False
+        for i in range(9,50):
+            if "results {V,I,T}" in linesstore[i]:
+                found = True
+                break
+
+        if not found:
+            print("Error: no results found in the formated DC version")
+            exit()
+
+        current = []
+        expvoltage = []
+        time = []
+        for j in range(i+1,len(linesstore)):
+            s = linesstore[j].split("\t")
+            expvoltage.append(float(s[0]))
+            current.append(float(s[1]))
+            time.append(float(s[2]))
+
+        Evaluehold.append(Evalues)
+        scanratehold.append(scanrate)
+        currenthold.append(current)
+        voltagehold.append(expvoltage)
+
+    # check to see if exp files are the same
+    if all([Evaluehold[0] == x1 for x1 in Evaluehold]) and all(
+            [scanratehold[0] == x1 for x1 in scanratehold]):
+        Evalues = Evaluehold[0]
+        timedata = [time[1],time[-1]]
+        scanrate = scanratehold[0]
+        # """Average the experimental voltage""" something can be added here for the psuedo reference
+        expvoltage = np.average(voltagehold, axis=0)
+
+    else:
+        print("ERROR the exp settings files are wrong and don't all match up")
+        exit()
+
+    """ Just assume formatted versions are in DC """
+    ACmode = False
+    ACsettings = None
+
+    return ACmode,Evalues,ACsettings,scanrate,currenthold, polarity,expvoltage, timedata
+
+# rolling average
+def moving_average(a,n):
+    return np.convolve(a,np.ones(n),'valid')/n
+
+
+#image generater for Inception time based on 1d time series
+def incept_imagegen(modelclass,data,ACmode,modeltype,filename):
+    import tensorflow as tf
+    # will need something here to extract the information
+    data1 = np.array(data[0])
+    if ACmode: # ac mode layers
+        nlayer = 8
+    else:
+        nlayer = 14
+
+    layer_outputs = [layer.output for layer in modelclass.layers]
+
+    activation_model = tf.keras.Model(inputs=modelclass.input, outputs=layer_outputs)
+
+    activations = activation_model.predict([data])
+    #print("activation layer")
+    #print(len(activations))
+
+    #print(modelclass.summary())
+
+    # put the names of the layers in
+    layer_names = []
+    for layer in modelclass.layers:
+        layer_names.append(layer.name)  # Names of the layers, so you can have them as part of your plot
+
+    ptot = np.zeros(256)
+    for layer_name, layer_activation in zip(layer_names, activations):  # Displays the feature maps
+        if "activation" in layer_name:
+            print(np.array(layer_activation).shape)
+            print(layer_activation)
+            layer =np.array(layer_activation[0])
+            print(data1.shape)
+
+            x = np.average(layer,axis=1)
+            p =  x/max(x)
+            ptot = ptot + p
+
+    import matplotlib.colors as mcolors
+    m = ptot.max()
+    cmap = "cividis"
+    norm = plt.Normalize(ptot.min()/m, ptot.max()/m)
+    fig, axs = plt.subplots(9)
+    t = [i for i in range(len(data1[:,0]))]
+    y = np.cos(t)
+    print(ptot.shape)
+    for i in range(9):
+        axs[i].scatter(t, data1[:,i], c=ptot/m,edgecolors="none",cmap=cmap)
+
+    from matplotlib.cm import ScalarMappable
+    sm = ScalarMappable(norm=norm, cmap=cmap)
+    sm.set_array([])
+    cbar = fig.colorbar(sm, ax=axs[:])
+    cbar.ax.set_title("Overall Weight")
+
+    fig.text(0.5, 0.04, "Datapoint", ha='center')
+    fig.text(0.04, 0.45, "Normalised Current", va='center', rotation='vertical')
+
+    #axs[0].plot(ptot)
+
+    #axs[1].plot(data1[:,4])
+    s = filename.replace('.txt', '')
+    plt.savefig(s+ "_figuremap"+modeltype+".png")
+
+
+
+    return

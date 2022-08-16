@@ -1,8 +1,26 @@
 import seaborn as sns
+<<<<<<< HEAD
+import DNN_run_mods
+=======
+>>>>>>> main
 import numpy as np
 from pandas import DataFrame
 import matplotlib.pyplot as plt
 
+<<<<<<< HEAD
+ACmode = True
+
+if ACmode: # AC mode
+    DNNfile,clusterbayesloc = DNN_run_mods.DNN_model_locloader("DNN_MODELS/AC_DNNMODEL_LOCATION.txt")
+else: # DC case
+    DNNfile,clusterbayesloc = DNN_run_mods.DNN_model_locloader("DNN_MODELS/DC_DNNMODEL_LOCATION.txt")
+
+clusterbayes = DNN_run_mods.clusterbayesloader(clusterbayesloc)
+
+"""LOAD IN THE CLUSTERING FILE"""
+if type(clusterbayesloc) != None:
+    clusterbayes = DNN_run_mods.clusterbayesloader(clusterbayesloc)
+=======
 # loads the bayesian probability of the function
 def clusterbayesloader(filename):
     f = open(filename)
@@ -49,6 +67,7 @@ clusterbayes = clusterbayesloader(clusterbayesloc)
 """LOAD IN THE CLUSTERING FILE"""
 if type(clusterbayesloc) != None:
     clusterbayes = clusterbayesloader(clusterbayesloc)
+>>>>>>> main
     print(clusterbayes)
     bayesmatrix = np.zeros((len(clusterbayes[0]),len(clusterbayes)))
     for i in range(len(clusterbayes)):
@@ -65,10 +84,13 @@ clo.reverse()
 print(clo)
 r,c = bayesmatrix.shape
 
+<<<<<<< HEAD
+=======
 clo = plt.rcParams['axes.prop_cycle'].by_key()['color']
 print(clo)
 x = []
 colour = [clo[0],clo[1],clo[4],clo[3],clo[2]]
+>>>>>>> main
 
 
 data = DataFrame(clusterbayes)
@@ -79,7 +101,11 @@ data = data.transpose()
 data["RM"] = ['$E$', '$EC$', '$EE$', '$ECE$', '$E_{Surf}$', '$E_{Cat}$']
 print(data)
 plt.figure()
+<<<<<<< HEAD
+data.plot( x="RM", kind="bar",color=clo,figsize=(10,5),fontsize=font)
+=======
 data.plot( x="RM", kind="bar",color=colour,figsize=(10,5),fontsize=font)
+>>>>>>> main
 plt.legend([i for i in range(1,12)],title="$N_c$")
 #sns.barplot(data=data,x="RM",color=clo1)
 plt.ylim([0,1])

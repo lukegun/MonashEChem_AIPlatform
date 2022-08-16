@@ -1,4 +1,4 @@
-serverdata = postgres, Quantum2, localhost, 5432,timeseriestest
+serverdata = postgres, password, IP-address, port, tablename
 inputMEC = masterin/MasterEDC.txt
 ReactionMech = E
 RedoxOrder = Red

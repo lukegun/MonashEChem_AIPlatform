@@ -11,6 +11,13 @@ import numpy as np
 import shutil
 import DNN_run_mods as runner_mod
 from joblib import dump
+import tensorflow as tf
+
+gpus = tf.config.experimental.list_physical_devices(device_type='GPU')
+tf.config.experimental.set_memory_growth(gpus[0], True)
+tf.config.set_logical_device_configuration(gpus[0], [tf.config.LogicalDeviceConfiguration(memory_limit=1424)])
+
+
 """iMPORT DNN settings""" #Need to get which experimental parameters where loading
 time1 = time.time()
 input_name = sys.argv[1]
@@ -54,9 +61,9 @@ elif supivisorclass == "clustering":
         preclusterreact_class = react_class
 
         # SOME GROUPING LABEL IN HERE
-        Groupclass = TDNN.ACreactclusterupdate(react_class, serverdata,num=10) # number is cut of for subgroups
+        Groupclass = TDNN.ACreactclusterupdate(react_class, serverdata,num=25) # number is cut of for subgroups
         """something to get reactionmech labels for AC CASE"""
-        cuttoff = 800  # groups need to be larger then this number
+        cuttoff = 1000  # groups need to be larger then this number
 
         groupeddic = AC_clustergroup(Groupclass, cuttoff)
 
@@ -118,18 +125,30 @@ elif supivisorclass == "clustering":
         preclusterreactionmech = reactionmech
         preclusterreact_class = react_class
         react_class, reactionmech = TDNN.DCreactclusterupdate(react_class,serverdata)
+        #print(react_class)
 
         """print the react class to file"""
+        holdtot = []
+        nnn = len(reactionmech)
+        [holdtot.append([]) for i in range(nnn)]
+        for stuff in react_class:
+            for x in stuff: # itterate through [25016, 'H-1ad'],
+                for j in range(nnn):
+                    # sort into the system based on the cluster
+                    if x[1] == reactionmech[j]:
+                        holdtot[j].append(x[0])
+                        break
+        labelnums = holdtot
+
+
         # print(react_class)
         # print(len(react_class))
         clusteredlist = []
-        for stuff in react_class:
-            labelnums = []
-            for sims in stuff:
-                labelnums.append(sims[0])
-
-            bayesdic = TDNN.classifierlabelbayes(labelnums, serverdata, preclusterreactionmech)  # last value passes
+        for i in range(nnn):
+            print(len(labelnums[i]))
+            bayesdic = TDNN.classifierlabelbayes(labelnums[i], serverdata, preclusterreactionmech)  # last value passes
             clusteredlist.append(bayesdic)
+        print(clusteredlist)
 
 
     Narray = TDNN.Narray_count(react_class)
@@ -188,15 +207,40 @@ if supivisorclass == "clustering":
 
 #seperates the input data into each model type
 if variate: #use the multivariate models TRUE = multivariate
+    #traindata = traindata[:200]
+    #testdata = testdata[:40]
 
     print("Running classifier on AC data")
+    harmtrain, harmtrain_mech, harmtrain_ID = NNt.AC_NN_setter(traindata, harmdata)  # training data
+    harmtest, harmtest_mech, harmtest_ID = NNt.AC_NN_setter(testdata, harmdata)  # testing data for validation
 
-    harmtrain, harmtrain_mech, harmtrain_ID = NNt.DC_NN_setter(traindata, harmdata)  # training data
-    harmtest, harmtest_mech, harmtest_ID = NNt.DC_NN_setter(testdata, harmdata)  # testing data for validation
+    #harmtest = harmtest[0:90]
+    #harmtrain = harmtrain[0:900]
 
     # small change made fater less likely to parralellise it
     currentdatatest, mechaccepttest = TDNN.ACsqlcurrentcollector(serverdata, harmdata, harmtest, deci,DNNmodel)
     currentdatatrain, mechaccepttrain = TDNN.ACsqlcurrentcollector(serverdata, harmdata, harmtrain, deci,DNNmodel)
+
+    #This is to do the corrections on surface concentration and to make the normalisation the same
+    if True:
+        scalar = 7568546.0  # average scalar difference between E reaction mechanism and Esurf
+        if supivisorclass == "reactmech":
+            for i in range(len(mechaccepttest)):
+                if mechaccepttest[i][1] == "ESurf":
+                    currentdatatest[i] = currentdatatest[i]*scalar
+
+            for i in range(len(mechaccepttrain)):
+                if mechaccepttrain[i][1] == "ESurf":
+                    currentdatatrain[i] = currentdatatrain[i]*scalar
+        elif supivisorclass == "clustering": # this is required due to the clustering
+            # change in 1 and 2 is a quick fix for the translations
+            for i in range(len(mechaccepttest)):
+                if mechaccepttest[i][2] == "ESurf":
+                    currentdatatest[i] = currentdatatest[i] * scalar
+
+            for i in range(len(mechaccepttrain)):
+                if mechaccepttrain[i][2] == "ESurf":
+                    currentdatatrain[i] = currentdatatrain[i] * scalar
 
     #load all the data from sql databaase and save to RA
 
@@ -249,7 +293,6 @@ if variate: #use the multivariate models TRUE = multivariate
         print(classifier.score(X_test_transform, mechlabelstest))
 
     elif DNNmodel == "inceptiontime": # use the inception time DNN model
-        print("Running inceptiontime classifier on DC data")
         from classifiers.inception import Classifier_INCEPTION
         from tensorflow import keras
 
@@ -266,20 +309,76 @@ if variate: #use the multivariate models TRUE = multivariate
         currentdatatrain = np.array(currentdatatrain)
         currentdatatest = np.array(currentdatatest)
 
+        # use a voltage scale
+        import matplotlib.pyplot as plt
+
+        testVscale = False
+        if testVscale:
+            Nchanel = 2
+
+            deci = int(deci / 2)
+            plt.plot(currentdatatrain[0, :])
+            currentdatatrain = np.array([currentdatatrain[:, :deci], currentdatatrain[:, -1:deci - 1:-1]])
+            currentdatatest = np.array([currentdatatest[:, :deci], currentdatatest[:, -1:deci - 1:-1]])
+            plt.plot(currentdatatrain[0, 0, :])
+            plt.plot(currentdatatrain[1, 0, :])
+            nchanels, ntrain, r = currentdatatrain.shape
+            nchanels, ntest, r = currentdatatest.shape
+            print(currentdatatrain.shape)
+
+            currentdatatrain = currentdatatrain.transpose(1, 2, 0)
+            currentdatatest = currentdatatest.transpose(1, 2, 0)
+
+        else:
+            pass
+            """ntrain, r,Nchanel = currentdatatrain.shape
+            ntest, r,Nchanel = currentdatatest.shape
+
+            currentdatatrain = currentdatatrain.reshape(ntrain, r, Nchanel)
+            currentdatatest = currentdatatest.reshape(ntest, r, Nchanel)"""
+        print(currentdatatrain.shape)
+
+
         # these are 1D so not required
         mechlabelstrain = np.array(mechlabelstrain)
+
+        # sets up the class weights for the uneven groups
+        class_weight = {}
+        u, i = np.unique(mechlabelstrain, return_counts=True)
+        dictnum = dict(zip(u, i))
+
+        f = max(dictnum, key=dictnum.get)
+        f = dictnum[f]
+        for keys, items in dictnum.items():
+            print(items)
+            if supivisorclass == "clustering":
+                class_weight[keys] = f / items
+                lr = 0.1 #0.5
+                Nepoch = 40
+                adjustable_lr0 = True
+
+            else:
+                class_weight[keys] = 1
+                lr = 0.5
+                Nepoch = 40
+                adjustable_lr0 = True
+        print(class_weight)
+
+        print("Data Collected fitting DNN")
+
+        # Needs to be after the weights
         mechlabelstrain = keras.utils.to_categorical(mechlabelstrain, num_classes=Nmodels)
         mechlabelstest1 = np.array(mechlabelstest)
         mechlabelstest = keras.utils.to_categorical(mechlabelstest, num_classes=Nmodels)
 
-        print("Data Collected fitting DNN")
 
         # model = Classifier_INCEPTION("output",None,nb_classes=Nmodels )
-        model = Classifier_INCEPTION("output", (deci, Nchanel), nb_classes=Nmodels, verbose=True,
-                                     nb_epochs=40)  # using 20 epochs for ease
+
+        model = Classifier_INCEPTION(filename + "/outputAC", (deci, Nchanel), nb_classes=Nmodels, verbose=True,lr0 = lr,
+                                     nb_epochs=Nepoch,depth=4,adjustable_lr0=adjustable_lr0,mode="AC")  # using 20 epochs for ease depth=6 lr0= 0.5, nb_epochs=40,depth=4
         model.build_model((deci, Nchanel), Nmodels)
-        model.fit(currentdatatrain, mechlabelstrain, currentdatatest, mechlabelstest, mechlabelstest1)
-        print("TestingDNN")
+        model.fit(currentdatatrain, mechlabelstrain, currentdatatest, mechlabelstest, mechlabelstest1,plot_test_acc=True, class_weight=class_weight)
+
         """# NEED SOMETHING HERE TO TEST THE MODEL ACCURACY
 
             # also need to clean up the output metrics"""
@@ -289,7 +388,8 @@ if variate: #use the multivariate models TRUE = multivariate
         exit()
 
 else: # use the univarate models Mainly used in DC Case
-
+    #traindata = traindata[:200]
+    #testdata = testdata[:40]
     harmdata = [-1]     # just set it up to use the DC case
     harmnum = -1
 
@@ -330,7 +430,7 @@ else: # use the univarate models Mainly used in DC Case
         mechlabelstrain = np.array(mechlabelstrain)
         mechlabelstest = np.array(mechlabelstest)
 
-        rocket = Rocket(num_kernels=1000)  # by default, ROCKET uses 10,000 kernels ideally but where trying to get ram working
+        rocket = Rocket(num_kernels=5000)  # by default, ROCKET uses 10,000 kernels ideally but where trying to get ram working
         rocket.fit(currentdatatrain)
         X_train_transform = rocket.transform(currentdatatrain)
 
@@ -356,15 +456,66 @@ else: # use the univarate models Mainly used in DC Case
         # change stuff to pd series where row is input, column is dimension and "3rd dim" is current trace for compadability
         currentdatatrain = np.array(currentdatatrain)
         currentdatatest = np.array(currentdatatest)
-        ntrain,r = currentdatatrain.shape
-        currentdatatrain = currentdatatrain.reshape(ntrain,r,Nchanel)
 
+        # use a voltage scale
+        import matplotlib.pyplot as plt
+        testVscale = False
+        if testVscale:
+            Nchanel = 2
 
-        ntest, r = currentdatatest.shape
-        currentdatatest = currentdatatest.reshape(ntest, r, Nchanel)
+            deci = int(deci/2)
+            plt.plot(currentdatatrain[0, :])
+            currentdatatrain = np.array([currentdatatrain[:, :deci], currentdatatrain[:, -1:deci - 1:-1]])
+            currentdatatest = np.array([currentdatatest[:, :deci], currentdatatest[:, -1:deci-1:-1]])
+            plt.plot(currentdatatrain[0, 0,:])
+            plt.plot(currentdatatrain[1, 0, :])
+            nchanels,ntrain, r = currentdatatrain.shape
+            nchanels,ntest, r = currentdatatest.shape
+            print(currentdatatrain.shape)
+
+            currentdatatrain = currentdatatrain.transpose(1, 2, 0)
+            currentdatatest = currentdatatest.transpose(1, 2, 0)
+
+        else:
+            Nchanel = 1
+            ntrain,r = currentdatatrain.shape
+            ntest, r = currentdatatest.shape
+
+            currentdatatrain = currentdatatrain.reshape(ntrain,r,Nchanel)
+            currentdatatest = currentdatatest.reshape(ntest, r, Nchanel)
+
+        print("double check the univariate DNN case")
+        """print(currentdatatrain.shape)
+        plt.plot(currentdatatrain[0,:,0])
+        plt.plot(currentdatatrain[0, :, 1])
+        plt.savefig("test.png")
+        plt.close()
+        exit()"""
 
         # these are 1D so not required
         mechlabelstrain = np.array(mechlabelstrain)
+
+        # sets up the class weights for the uneven groups
+        class_weight = {}
+        u, i = np.unique(mechlabelstrain, return_counts=True)
+        dictnum = dict(zip(u, i))
+
+        f = max(dictnum, key=dictnum.get)
+        f = dictnum[f]
+        for keys, items in dictnum.items():
+            print(items)
+            if supivisorclass == "clustering":
+                class_weight[keys] = 2*f / items
+                lr = 0.1
+                Nepoch = 30
+                adjustable_lr0 = True
+            else:
+                class_weight[keys] = 1
+                lr = 0.05
+                Nepoch = 20
+                adjustable_lr0 = False
+        print(class_weight)
+
         mechlabelstrain = keras.utils.to_categorical(mechlabelstrain, num_classes=Nmodels)
         mechlabelstest1 = np.array(mechlabelstest)
         mechlabelstest = keras.utils.to_categorical(mechlabelstest1, num_classes=Nmodels)
@@ -372,10 +523,11 @@ else: # use the univarate models Mainly used in DC Case
         print("Data Collected fitting DNN")
 
         #model = Classifier_INCEPTION("output",None,nb_classes=Nmodels )
-        print()
-        model = Classifier_INCEPTION("output", (deci,Nchanel), nb_classes=Nmodels,verbose=True,nb_epochs=40) # using 20 epochs for ease
+
+        model = Classifier_INCEPTION(filename + "/outputDC", (deci,Nchanel), nb_classes=Nmodels,verbose=True,nb_epochs=Nepoch,lr0 = lr, # 0.5 for clustering 0.1 for react mech
+                                     depth=3,nb_filters=64,adjustable_lr0=adjustable_lr0) # using 20 epochs for ease #attempting 4 3 is known to work better ,adjustable_lr0=True
         model.build_model((deci,Nchanel),Nmodels)
-        model.fit(currentdatatrain, mechlabelstrain,currentdatatest,mechlabelstest,mechlabelstest1)
+        model.fit(currentdatatrain, mechlabelstrain,currentdatatest,mechlabelstest,mechlabelstest1,plot_test_acc=True,class_weight= class_weight)
         print("TestingDNN")
         """# NEED SOMETHING HERE TO TEST THE MODEL ACCURACY
 

@@ -250,8 +250,23 @@ def DC_NN_setter(datain,harmnum):
 
         data_ID.append(inputs[0])
         data_mech.append(inputs[1])
+        print(inputs)
         data.append(
                 [inputs[0], inputs[1]])  # required as i don't trust other methods to be stable on parallelelisation
+    return data, data_mech, data_ID
+
+def AC_NN_setter(datain,harmnum):
+    data_ID = []
+    data_mech = []
+    data = []
+    print(len(datain))
+    for inputs in datain:
+
+        data_ID.append(inputs[0])
+        data_mech.append(inputs[1])
+        print(inputs)
+        data.append(
+                [inputs[0], inputs[1],inputs[3]])  # required as i don't trust other methods to be stable on parallelelisation
     return data, data_mech, data_ID
 
 # batch setter for NN

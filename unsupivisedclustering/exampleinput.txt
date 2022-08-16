@@ -1,4 +1,4 @@
-serverdata = postgres, Quantum2, 35.193.220.74, 5432, ftacv-test
+serverdata = postgres, password, IP-address, port, tablename
 filpcurrent = False
 filpcurrentrate = 0.5
 AC_case = True

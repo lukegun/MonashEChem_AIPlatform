@@ -1,4 +1,4 @@
-serverdata = postgres, Quantum2, 35.193.220.74, 5432, ftacv-test
+serverdata = postgres, password, IP-address, port, tablename
 supivisorclass = clustering
 ACCase = True
 multivariate = True

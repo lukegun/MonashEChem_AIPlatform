@@ -165,7 +165,7 @@ def ReactID_collector(serverdata,exp_class):
             """IN FUTURE YOU CAN PROBABLY INCLUDE SOMETHING THAT INCORPURATES THE BV or MH REACTION MODEL"""
 
             for IDs in cuurr:
-                react_class.append([IDs[0],expset[1],IDs[1]])  # of the form ReactionIDS, classification,
+                react_class.append([IDs[0],expset[1],IDs[1],expset[1]])  # of the form ReactionIDS, classification,
             react_class_tot.append(react_class)
 
         except (Exception, psycopg2.Error) as error:
@@ -279,7 +279,14 @@ def sqlcurrentcollector(serverdata,current, reactionID,deci):
                 Ndec = int(nlen / deci)
                 xtot = xtot[::Ndec]
 
-                xtot = xtot / max(xtot)
+                # this is the normalisation stuff
+                if current == 0 or current == -1:
+                    xs = [-1, 1]
+                else:
+                    xs = [0, 1]
+                xtot = (xs[1] - xs[0]) * ((xtot + np.max(np.abs(xtot))) / (2 * np.max(np.abs(xtot)))) + xs[0]
+                #xtot = (xs[1]-xs[0])*((xtot-np.min(xtot))/(np.max(xtot)-np.min(xtot)))+ xs[0]
+
                 tots.append(xtot)
                 mechaccept.append([ID[0],ID[1]])
 
@@ -338,7 +345,7 @@ def ACsqlcurrentcollector(serverdata, harmdata, reactionID, deci,DNNmodel):
         for listtot in listtot1:
 
             t1 = time.time()
-            yaya = """SELECT "Reaction_ID","HarmCol0","HarmCol1","HarmCol2","HarmCol3","HarmCol4","HarmCol5","HarmCol6","HarmCol7","HarmCol8"  FROM "HarmTab" WHERE "Reaction_ID" IN %s"""
+            yaya = """SELECT "Reaction_ID", "HarmCol0","HarmCol1","HarmCol2","HarmCol3","HarmCol4","HarmCol5","HarmCol6","HarmCol7","HarmCol8" FROM "HarmTab" WHERE "Reaction_ID" IN %s"""
             cursor.execute(yaya, (listtot,))
             xtotbigtot = cursor.fetchall()
             print(time.time() - t1)
@@ -354,7 +361,7 @@ def ACsqlcurrentcollector(serverdata, harmdata, reactionID, deci,DNNmodel):
                 else:
                     dic = np.zeros((deci,len(harmdata)))
 
-                mechaccept.append([ID[0], ID[1]])
+                mechaccept.append([ID[0], ID[1],ID[2]])
 
                 i = 0
                 breakout = False
@@ -544,7 +551,8 @@ def ACreactclusterupdate2(serverdata,groupdic):
 
         cursor = connection.cursor()
 
-        yaya = """SELECT "Reaction_ID" FROM "ReactionClass" WHERE "OverallLabel" = %s """
+        #Reaction mech is needed for the conversion of the surface confined systems
+        yaya = """SELECT "Reaction_ID", "ReactionMech" FROM "ReactionClass" WHERE "OverallLabel" = %s """
 
         newreact_class = []
         for reactionmechlabels,innerlabel in groupdic.items():
@@ -561,7 +569,7 @@ def ACreactclusterupdate2(serverdata,groupdic):
                 cursor.execute(yaya,(labels,))
                 xclass = cursor.fetchall()
                 for values in xclass:
-                    innclass.append([values[0],reactionmechlabels,harmnum])
+                    innclass.append([values[0],reactionmechlabels,harmnum,values[1]])
 
             newreact_class.append(innclass)
 

@@ -84,7 +84,7 @@ def AC_clustergroup(ks,cuttoff):
 
 
                 # Can do two difference but looks like it may group things a little twoo much
-                if Nt - j == 2 or Nt - j == 1 or Nt - j == 0:
+                if  Nt - j == 2 or Nt - j == 1 or Nt - j == 0:
 
                     listold = similaurdic.get(values)
                     if type(listold) == type(None):

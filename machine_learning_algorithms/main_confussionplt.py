@@ -20,6 +20,12 @@ from tensorflow import keras
 from joblib import load
 from joblib import dump
 import random
+import tensorflow as tf
+import DNN_run_mods as runner_mod
+
+gpus = tf.config.experimental.list_physical_devices(device_type='GPU')
+tf.config.experimental.set_memory_growth(gpus[0], True)
+tf.config.set_logical_device_configuration(gpus[0], [tf.config.LogicalDeviceConfiguration(memory_limit=1024)])
 
 """iMPORT DNN settings""" #Need to get which experimental parameters where loading
 time1 = time.time()
@@ -29,13 +35,13 @@ Numbersamples = 2000 # number of reaction to get from the sampled data
 
 
 """Load in a settings file with the location of the DNN models"""
-DNNfile,clusterbayesloc = DNN_run_mods.DNN_model_locloader("DNNMODEL_LOCATION.txt")
+DNNfile,clusterbayesloc = DNN_run_mods.DNN_model_locloader("DNN_MODELS/AC_DNNMODEL_LOCATION.txt")
 
 
 serverdata, supivisorclass, ACCase, variate, DNNmodel, cpu_workers, gpu_workers, deci, harmdata, modelparamterfile, \
     trainratio, reactionmech = TDNN.inputloader(input_name)
 
-
+Q
 # Something to classify the DNN label and data to a specific model
 print(serverdata)
 # THIS GETS THE LABELS
@@ -72,7 +78,20 @@ testdata, traindata, Ntest, Ntrain = TC_mod.suffle_splittrainratio(trainratio, r
 harmtrain, harmtrain_mech, harmtrain_ID = NNt.DC_NN_setter(traindata, harmdata)  # training data
 
 # small change made fater less likely to parralellise it
-currentdata, mechaccept = TDNN.ACsqlcurrentcollector(serverdata, harmdata, harmtrain, deci,DNNmodel)
+j = 0
+if ACCase:
+    currentdata, mechaccept = TDNN.ACsqlcurrentcollector(serverdata, harmdata, harmtrain, deci,DNNmodel)
+    print(type(currentdata[0]))
+    # This is to do the corrections on surface concentration and to make the normalisation the same
+    if True:
+        scalar = 7568546.0  # average scalar difference between E reaction mechanism and Esurf
+        for i in range(len(mechaccept)):
+            if mechaccept[i][1] == "ESurf":
+                j += 1
+                currentdata[i] = currentdata[i]*scalar
+
+else:
+    currentdata, mechaccept = TDNN.sqlcurrentcollector(serverdata, -1, harmtrain, deci)
 
 # sets up model numbers FOR REACT MECH ONES
 model_numcode = {}
@@ -121,13 +140,16 @@ filename = NN_train_mod.genericoutpufile(input_name+"CM")
 modeltype = list(DNNfile.keys())
 print(modeltype)
 Rscurr = []
-for Gencurrent in currentdata:
-    dic = {}
-    for i in range(len(Gencurrent)):
-        dic.update({str(i): Gencurrent[i]})
+if ACCase:
+    for Gencurrent in currentdata:
+        dic = {}
+        for i in range(len(Gencurrent)):
+            dic.update({str(i): Gencurrent[i]})
 
-    Rscurr.append(pd.DataFrame(dic))
-
+        Rscurr.append(pd.DataFrame(dic))
+else:
+    print("ROCKET CURRENT HAS NOT BEEN SET UP FOR DC CASE")
+    pass
 #Rscurr = datahold
 #print(Rscurr.shape)
 
@@ -138,6 +160,11 @@ for Gencurrent in currentdata:
 Iscurr =np.array(datahold)
 r = Iscurr.shape
 #Iscurr = Iscurr.transpose(0, 1, 2)
+if not ACCase:
+    Nchanel = 1
+    ntrain, r = Iscurr.shape
+    Iscurr= Iscurr.reshape(ntrain,r,Nchanel)
+
 print(Iscurr.shape)
 
 # again deletes stuff to free up memory
@@ -227,24 +254,40 @@ for key, items in DNNfile.items():
         for values in y_pred:
             nxm = list(values).index(max(values))
             maxpred.append(nxm)
-            maxpred2nd.append(list(values).index(max(values[:nxm]+values[nxm+1:]))) # list is like super lazy
+            maxpred2nd.append(list(values).index(runner_mod.second_largest(values))) # list is like super lazy
 
 
     #print(key, y_pred)
 
-    models1 = modellabels #this labels the axis
+    models2 = modellabels  # this labels the axis
+    models1 = []
+    for h in models2:
+        if h == "ECat":
+            models1.append("$E_{Cat}$")
+        elif h == "ESurf":
+            models1.append("$E_{Surf}$")
+        else:
+            models1.append("$" + h + "$")
     confussion = confusion_matrix(harmtrain_mech,maxpred,normalize="true")
     print(confussion)
-    disp = ConfusionMatrixDisplay(confusion_matrix=confussion,display_labels=models1 )
+    disp = ConfusionMatrixDisplay(confusion_matrix=confussion,display_labels=models1)
+    font = {'family': 'normal',
+            'size': 12}
+    plt.rc('font', **font)
     disp.plot()
+    disp.ax_.get_images()[0].set_clim(0, 1) # this is for set limits
     plt.savefig(filename+"/confussionmatrix_maxpredict"+str(key)+".png")
     plt.close()
 
-    models1 = modellabels  # this labels the axis
+
     confussion = confusion_matrix(harmtrain_mech, maxpred2nd, normalize="true")
     print(confussion)
     disp = ConfusionMatrixDisplay(confusion_matrix=confussion, display_labels=models1)
+    font = {'family': 'normal',
+            'size': 12}
+    plt.rc('font', **font)
     disp.plot()
+    disp.ax_.get_images()[0].set_clim(0, 1)
     plt.savefig(filename + "/confussionmatrix_2ndmaxpredict" + str(key) + ".png")
     plt.close()
 

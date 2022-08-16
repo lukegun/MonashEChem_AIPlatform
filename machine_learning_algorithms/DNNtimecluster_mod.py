@@ -134,3 +134,4 @@ def suffle_splittrainratio(trainratio, react_class):
     traindata = holder[Ntest::]
 
     return testdata, traindata, Ntest, Ntrain
+
