@@ -1267,6 +1267,10 @@ def MECoutsetter(data,AC_freq, AC_amp):
 
 # some function for passing the experimental setings to the sql database
 def sqlexpsettings(serverdata,data, spaces, nondim, AutoNharm,bandwidth,ReactionMech,windowing,guass_std,inputtxt):
+
+    # added this line to Censor the database information before saving to the database
+    inputtxt = 'serverdata = *******, ********, ******, ****, *******\n' + inputtxt.split("\n", 1)[1]
+
     #connect to sql server
     dic = sqlexpdicset(data, spaces)
     dic.update({"AutoNharm": AutoNharm})

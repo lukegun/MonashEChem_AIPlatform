@@ -1,0 +1,645 @@
+--
+-- PostgreSQL database dump
+--
+
+-- Dumped from database version 14.7 (Ubuntu 14.7-0ubuntu0.22.04.1)
+-- Dumped by pg_dump version 15.1 (Ubuntu 15.1-1.pgdg20.04+1)
+
+-- Started on 2023-03-15 14:46:11 AEDT
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'BIG5';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
+-- TOC entry 4 (class 2615 OID 2200)
+-- Name: public; Type: SCHEMA; Schema: -; Owner: postgres
+--
+
+-- *not* creating schema, since initdb creates it
+
+
+ALTER SCHEMA public OWNER TO postgres;
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- TOC entry 209 (class 1259 OID 16385)
+-- Name: ExperimentalSettings; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."ExperimentalSettings" (
+    "Estart" real,
+    "Erev" real,
+    cyclenum real,
+    "Scanrate" real,
+    datapoints integer,
+    "GeometryType" integer,
+    "PArea" real,
+    "Nac" integer,
+    "ACFreq1" real[],
+    boolsim boolean,
+    "EXPsetrow" integer,
+    "AutoNharm" real,
+    "Ctime" timestamp without time zone,
+    "Bandlist" real[],
+    "ReactionMech" text,
+    "IFT_windowing" text,
+    "WinGuass_std" double precision,
+    "React_IDrange" integer[],
+    inputfile text,
+    "Nonedimcurr" boolean
+);
+
+
+ALTER TABLE public."ExperimentalSettings" OWNER TO postgres;
+
+--
+-- TOC entry 3330 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: TABLE "ExperimentalSettings"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON TABLE public."ExperimentalSettings" IS 'Experimental settings for the FTACV operations as the occur';
+
+
+--
+-- TOC entry 3331 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN "ExperimentalSettings"."Estart"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."ExperimentalSettings"."Estart" IS 'Starting potential';
+
+
+--
+-- TOC entry 3332 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN "ExperimentalSettings"."Erev"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."ExperimentalSettings"."Erev" IS 'Switching potential (V)';
+
+
+--
+-- TOC entry 3333 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN "ExperimentalSettings".cyclenum; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."ExperimentalSettings".cyclenum IS 'Number of cycles';
+
+
+--
+-- TOC entry 3334 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN "ExperimentalSettings"."Scanrate"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."ExperimentalSettings"."Scanrate" IS 'Scan speed of Dc potential (V/s)';
+
+
+--
+-- TOC entry 3335 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN "ExperimentalSettings".datapoints; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."ExperimentalSettings".datapoints IS 'number of data points in the original file';
+
+
+--
+-- TOC entry 3336 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN "ExperimentalSettings"."GeometryType"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."ExperimentalSettings"."GeometryType" IS ' type of geometry for the working electrode (1=planar, 2=spherical, 3=cylinder, 4=RDE)';
+
+
+--
+-- TOC entry 3337 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN "ExperimentalSettings"."PArea"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."ExperimentalSettings"."PArea" IS 'Planar surface area of the working electrode (cm^2)';
+
+
+--
+-- TOC entry 3338 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN "ExperimentalSettings"."Nac"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."ExperimentalSettings"."Nac" IS ' number of AC sources in FTACV experiment
+';
+
+
+--
+-- TOC entry 3339 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN "ExperimentalSettings"."ACFreq1"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."ExperimentalSettings"."ACFreq1" IS 'Array of AC amplitude and frequency (mV and Freq)';
+
+
+--
+-- TOC entry 3340 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN "ExperimentalSettings".boolsim; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."ExperimentalSettings".boolsim IS 'Is the data simulated True = yes false = experimental';
+
+
+--
+-- TOC entry 3341 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN "ExperimentalSettings"."EXPsetrow"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."ExperimentalSettings"."EXPsetrow" IS 'Row in Expermenal settings where all the data is stored';
+
+
+--
+-- TOC entry 3342 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN "ExperimentalSettings"."AutoNharm"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."ExperimentalSettings"."AutoNharm" IS 'Automatic value of cut of for harmonic';
+
+
+--
+-- TOC entry 3343 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN "ExperimentalSettings"."Ctime"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."ExperimentalSettings"."Ctime" IS 'Time when original generation was started for these calculations';
+
+
+--
+-- TOC entry 3344 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN "ExperimentalSettings"."Bandlist"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."ExperimentalSettings"."Bandlist" IS 'saved list of all the bandwidths used';
+
+
+--
+-- TOC entry 3345 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN "ExperimentalSettings"."ReactionMech"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."ExperimentalSettings"."ReactionMech" IS 'Reaction mechanism classification for the identified system. Current types (E, EE, EC)';
+
+
+--
+-- TOC entry 3346 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN "ExperimentalSettings"."IFT_windowing"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."ExperimentalSettings"."IFT_windowing" IS 'the windowing used for the IFT';
+
+
+--
+-- TOC entry 3347 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN "ExperimentalSettings"."WinGuass_std"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."ExperimentalSettings"."WinGuass_std" IS 'std dev of the guassian window before convolution';
+
+
+--
+-- TOC entry 3348 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN "ExperimentalSettings"."React_IDrange"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."ExperimentalSettings"."React_IDrange" IS 'range of the reaction IDs';
+
+
+--
+-- TOC entry 3349 (class 0 OID 0)
+-- Dependencies: 209
+-- Name: COLUMN "ExperimentalSettings".inputfile; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."ExperimentalSettings".inputfile IS 'A copy of the input file used in generating the simulations
+';
+
+
+--
+-- TOC entry 210 (class 1259 OID 16390)
+-- Name: HarmTab; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."HarmTab" (
+    "TotalCurrent" real[],
+    "NumHarm" integer,
+    "HarmCol0" real[],
+    "HarmCol1" real[],
+    "HarmCol2" real[],
+    "HarmCol3" real[],
+    "HarmCol4" real[],
+    "HarmCol5" real[],
+    "HarmCol6" real[],
+    "HarmCol7" real[],
+    "HarmCol8" real[],
+    "Reaction_ID" integer,
+    "EXPsetrow" integer
+);
+
+
+ALTER TABLE public."HarmTab" OWNER TO postgres;
+
+--
+-- TOC entry 3350 (class 0 OID 0)
+-- Dependencies: 210
+-- Name: COLUMN "HarmTab"."TotalCurrent"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."HarmTab"."TotalCurrent" IS 'Array of the total current identified in the experiment';
+
+
+--
+-- TOC entry 3351 (class 0 OID 0)
+-- Dependencies: 210
+-- Name: COLUMN "HarmTab"."NumHarm"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."HarmTab"."NumHarm" IS 'Number of harmonics present in data, calculated via a threshold limit. excluding the DC component ie overall series equals Nharm + 1';
+
+
+--
+-- TOC entry 3352 (class 0 OID 0)
+-- Dependencies: 210
+-- Name: COLUMN "HarmTab"."HarmCol0"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."HarmTab"."HarmCol0" IS 'harmonic time series of the DC component use 4096 datapoints (2^12).';
+
+
+--
+-- TOC entry 3353 (class 0 OID 0)
+-- Dependencies: 210
+-- Name: COLUMN "HarmTab"."EXPsetrow"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."HarmTab"."EXPsetrow" IS 'Row in Expermenal settings where all the data is stored';
+
+
+--
+-- TOC entry 211 (class 1259 OID 16395)
+-- Name: ReactionClass; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."ReactionClass" (
+    "Reaction_ID" integer,
+    "NumHarm" integer,
+    "TotalCurrent" text,
+    "HarmCol0" text,
+    "HarmCol1" text,
+    "HarmCol2" text,
+    "HarmCol3" text,
+    "HarmCol4" text,
+    "HarmCol5" text,
+    "HarmCol6" text,
+    "HarmCol7" text,
+    "HarmCol8" text,
+    "EXPsetrow" integer,
+    "OverallLabel" text,
+    "ClassificationAlgo" text,
+    classsetrow integer,
+    "ReactionMech" text,
+    traininglabels integer[]
+);
+
+
+ALTER TABLE public."ReactionClass" OWNER TO postgres;
+
+--
+-- TOC entry 3354 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN "ReactionClass"."ClassificationAlgo"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."ReactionClass"."ClassificationAlgo" IS 'Algorithim used in the classification step';
+
+
+--
+-- TOC entry 3355 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN "ReactionClass".classsetrow; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."ReactionClass".classsetrow IS 'Save the number to identify the classification stage and what was used';
+
+
+--
+-- TOC entry 3356 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN "ReactionClass"."ReactionMech"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."ReactionClass"."ReactionMech" IS 'Reaction mechanism classification for the identified system. Current types (E, EE, EC)';
+
+
+--
+-- TOC entry 3357 (class 0 OID 0)
+-- Dependencies: 211
+-- Name: COLUMN "ReactionClass".traininglabels; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."ReactionClass".traininglabels IS 'n_cluster labels';
+
+
+--
+-- TOC entry 212 (class 1259 OID 16400)
+-- Name: Simulatedparameters; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."Simulatedparameters" (
+    "ReactionMech" text,
+    "Reaction_ID" integer,
+    "EXPsetrow" integer,
+    "Temp" real,
+    "Ru" real,
+    "Electrontransmech" integer,
+    "CapDL" real[],
+    "Conc" real[],
+    "Diff" real[],
+    surfconfined integer[],
+    kbackward real[],
+    kforward real[],
+    "formalE" real[],
+    ksreal real[],
+    alpha real[],
+    type integer[],
+    "Reactionmatrix" character varying[],
+    "RedoxOrder" text,
+    "NumHarm" integer,
+    "Estart" real,
+    "Eend" real,
+    scanrate real,
+    "Exptime" real,
+    "ElectrodeArea" real,
+    sineamp real,
+    sinefreq real
+);
+
+
+ALTER TABLE public."Simulatedparameters" OWNER TO postgres;
+
+--
+-- TOC entry 3358 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: TABLE "Simulatedparameters"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON TABLE public."Simulatedparameters" IS 'Important table for storing the parameters for each row of the settings';
+
+
+--
+-- TOC entry 3359 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: COLUMN "Simulatedparameters"."ReactionMech"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."Simulatedparameters"."ReactionMech" IS 'Reaction mechanism classification for the identified system. Current types (E, EE, EC)';
+
+
+--
+-- TOC entry 3360 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: COLUMN "Simulatedparameters"."Reaction_ID"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."Simulatedparameters"."Reaction_ID" IS 'row in the harmtab where all the current data is stored';
+
+
+--
+-- TOC entry 3361 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: COLUMN "Simulatedparameters"."EXPsetrow"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."Simulatedparameters"."EXPsetrow" IS 'Row in Expermenal settings where all the data is stored';
+
+
+--
+-- TOC entry 3362 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: COLUMN "Simulatedparameters"."Temp"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."Simulatedparameters"."Temp" IS 'Temperature the experiment is conducted at (K)';
+
+
+--
+-- TOC entry 3363 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: COLUMN "Simulatedparameters"."Ru"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."Simulatedparameters"."Ru" IS 'uncompensated resistance (ohms)';
+
+
+--
+-- TOC entry 3364 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: COLUMN "Simulatedparameters"."Electrontransmech"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."Simulatedparameters"."Electrontransmech" IS 'The electron transfer mechanism (0 = Butler-Volmer; 1 = Marcus Theory)';
+
+
+--
+-- TOC entry 3365 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: COLUMN "Simulatedparameters"."CapDL"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."Simulatedparameters"."CapDL" IS 'double layer capacitance, input as an array of floats that equals the length polynominal constants used.';
+
+
+--
+-- TOC entry 3366 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: COLUMN "Simulatedparameters"."Conc"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."Simulatedparameters"."Conc" IS 'Array of all the concentrations used in the calculations';
+
+
+--
+-- TOC entry 3367 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: COLUMN "Simulatedparameters"."Diff"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."Simulatedparameters"."Diff" IS 'array of all the diffusion coefficient used (same as MECsim file) ';
+
+
+--
+-- TOC entry 3368 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: COLUMN "Simulatedparameters".surfconfined; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."Simulatedparameters".surfconfined IS 'is the system surface confined 0 = No, 1 = yes';
+
+
+--
+-- TOC entry 3369 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: COLUMN "Simulatedparameters".kbackward; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."Simulatedparameters".kbackward IS 'array of the k backwards rate as defined via MECsim';
+
+
+--
+-- TOC entry 3370 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: COLUMN "Simulatedparameters".kforward; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."Simulatedparameters".kforward IS 'array of the k backwards rate as defined via MECsim';
+
+
+--
+-- TOC entry 3371 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: COLUMN "Simulatedparameters"."formalE"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."Simulatedparameters"."formalE" IS 'array of formal potentials (V)';
+
+
+--
+-- TOC entry 3372 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: COLUMN "Simulatedparameters".ksreal; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."Simulatedparameters".ksreal IS 'electron transfer coefficient of he electron transfer mechanism (cm/s)';
+
+
+--
+-- TOC entry 3373 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: COLUMN "Simulatedparameters".alpha; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."Simulatedparameters".alpha IS 'alpha (0-1) or Lambda for marcus hush (eV)';
+
+
+--
+-- TOC entry 3374 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: COLUMN "Simulatedparameters".type; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."Simulatedparameters".type IS 'type of reaction that is record via MECSim (0-2)';
+
+
+--
+-- TOC entry 3375 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: COLUMN "Simulatedparameters"."Reactionmatrix"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."Simulatedparameters"."Reactionmatrix" IS 'matrix of the reaction occurring saved as a array of strings (that will need to be filtered and standardized) with each row being a new entry';
+
+
+--
+-- TOC entry 3376 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: COLUMN "Simulatedparameters"."RedoxOrder"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."Simulatedparameters"."RedoxOrder" IS 'Specifies if the electron transfers are reductions or oxidations (character) Re or Ox  OxOx or ReRe for EE system';
+
+
+--
+-- TOC entry 3377 (class 0 OID 0)
+-- Dependencies: 212
+-- Name: COLUMN "Simulatedparameters"."NumHarm"; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public."Simulatedparameters"."NumHarm" IS 'holder for number of harmonics to make the NN work better';
+
+
+--
+-- TOC entry 3320 (class 0 OID 16385)
+-- Dependencies: 209
+-- Data for Name: ExperimentalSettings; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public."ExperimentalSettings" ("Estart", "Erev", cyclenum, "Scanrate", datapoints, "GeometryType", "PArea", "Nac", "ACFreq1", boolsim, "EXPsetrow", "AutoNharm", "Ctime", "Bandlist", "ReactionMech", "IFT_windowing", "WinGuass_std", "React_IDrange", inputfile, "Nonedimcurr") FROM stdin;
+\.
+
+
+--
+-- TOC entry 3321 (class 0 OID 16390)
+-- Dependencies: 210
+-- Data for Name: HarmTab; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public."HarmTab" ("TotalCurrent", "NumHarm", "HarmCol0", "HarmCol1", "HarmCol2", "HarmCol3", "HarmCol4", "HarmCol5", "HarmCol6", "HarmCol7", "HarmCol8", "Reaction_ID", "EXPsetrow") FROM stdin;
+\.
+
+
+--
+-- TOC entry 3322 (class 0 OID 16395)
+-- Dependencies: 211
+-- Data for Name: ReactionClass; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public."ReactionClass" ("Reaction_ID", "NumHarm", "TotalCurrent", "HarmCol0", "HarmCol1", "HarmCol2", "HarmCol3", "HarmCol4", "HarmCol5", "HarmCol6", "HarmCol7", "HarmCol8", "EXPsetrow", "OverallLabel", "ClassificationAlgo", classsetrow, "ReactionMech", traininglabels) FROM stdin;
+\.
+
+
+--
+-- TOC entry 3323 (class 0 OID 16400)
+-- Dependencies: 212
+-- Data for Name: Simulatedparameters; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public."Simulatedparameters" ("ReactionMech", "Reaction_ID", "EXPsetrow", "Temp", "Ru", "Electrontransmech", "CapDL", "Conc", "Diff", surfconfined, kbackward, kforward, "formalE", ksreal, alpha, type, "Reactionmatrix", "RedoxOrder", "NumHarm", "Estart", "Eend", scanrate, "Exptime", "ElectrodeArea", sineamp, sinefreq) FROM stdin;
+\.
+
+
+--
+-- TOC entry 3329 (class 0 OID 0)
+-- Dependencies: 4
+-- Name: SCHEMA public; Type: ACL; Schema: -; Owner: postgres
+--
+
+REVOKE USAGE ON SCHEMA public FROM PUBLIC;
+GRANT ALL ON SCHEMA public TO PUBLIC;
+
+
+-- Completed on 2023-03-15 14:46:13 AEDT
+
+--
+-- PostgreSQL database dump complete
+--
+
